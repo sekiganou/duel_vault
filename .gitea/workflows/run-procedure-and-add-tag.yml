@@ -1,0 +1,107 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  run-procedure-and-add-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      procedure_name: ${{ steps.run-procedure.outputs.PROCEDURE_NAME }}
+      procedure_id: ${{ steps.run-procedure.outputs.PROCEDURE_ID }}
+      image_version: ${{ steps.get-image-version.outputs.IMAGE_VERSION }}
+      commit_hash: ${{ steps.get-commit-hash.outputs.COMMIT_HASH }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Procedure
+        id: run-procedure
+        run: |
+          if [[ "${GITHUB_REF##*/}" == "main" ]]; then
+            PROCEDURE_NAME="duelvault-build-and-deploy-prod"
+          else
+            echo "Not a target branch, skipping build and deploy."
+          exit 0
+          fi
+          echo "PROCEDURE_NAME=$PROCEDURE_NAME" >> ${GITHUB_OUTPUT}
+          echo "Running procedure: ${PROCEDURE_NAME}"
+          RESPONSE=$(curl --silent --header "Content-Type: application/json" \
+            --header "X-Api-Key: ${{ secrets.KOMODO_API_KEY }}" \
+            --header "X-Api-Secret: ${{ secrets.KOMODO_API_SECRET }}" \
+           --data "{ \"type\": \"RunProcedure\", \"params\": { \"procedure\": \"$PROCEDURE_NAME\" } }" \
+            ${{ vars.KOMODO_API_URL }}/execute)
+          echo "Full response: $RESPONSE"
+          PROCEDURE_ID=$(echo "$RESPONSE" | jq -r '._id["$oid"]')
+          echo "PROCEDURE_ID=$PROCEDURE_ID" >> ${GITHUB_OUTPUT}
+
+      - name: Wait for Procedure Completion
+        id: wait-for-procedure
+        run: |
+          PROCEDURE_NAME="${{ steps.run-procedure.outputs.PROCEDURE_NAME }}"
+          PROCEDURE_ID="${{ steps.run-procedure.outputs.PROCEDURE_ID }}"
+          while true; do
+            RESPONSE=$(curl --silent --header "Content-Type: application/json" \
+              --header "X-Api-Key: ${{ secrets.KOMODO_API_KEY }}" \
+              --header "X-Api-Secret: ${{ secrets.KOMODO_API_SECRET }}" \
+              --data "{ \"type\": \"GetUpdate\", \"params\": { \"id\": \"$PROCEDURE_ID\" } }" \
+              ${{ vars.KOMODO_API_URL }}/read)
+            echo "Full response: $RESPONSE"
+            STATUS=$(echo "$RESPONSE" | jq -r '.status')
+            SUCCESS=$(echo "$RESPONSE" | jq -r '.success')
+            if [[ -z "$STATUS" ]]; then
+              echo "Error: Could not determine procedure status from response."
+              exit 1
+            fi
+            if [[ "$STATUS" == "Complete" && "$SUCCESS" == "true" ]]; then
+              echo "Procedure completed successfully."
+              break
+            elif [[ "$STATUS" == "Complete" && "$SUCCESS" == "false" ]]; then
+              echo "Procedure failed."
+              echo "Response: $(echo "$RESPONSE")"
+              exit 1
+            elif [[ "$STATUS" == "InProgress" ]]; then
+              echo "Waiting for procedure to complete..."
+              sleep 2
+            else
+              echo "Unexpected status: $STATUS"
+              echo "Response: $RESPONSE"
+            fi
+          done
+
+      - name: Get Short Commmit Hash
+        id: get-commit-hash
+        run: |
+          COMMIT_HASH="$(git rev-parse --short HEAD)"
+          echo "COMMIT_HASH=$COMMIT_HASH" >> $GITHUB_OUTPUT
+          echo "Commit hash: $COMMIT_HASH"
+
+      - name: Get Image Version
+        id: get-image-version
+        run: |
+          RESPONSE=$(curl --silent --header "Content-Type: application/json" \
+            --header "X-Api-Key: ${{ secrets.KOMODO_API_KEY }}" \
+            --header "X-Api-Secret: ${{ secrets.KOMODO_API_SECRET }}" \
+            --data '{ "type": "GetBuild", "params": { "build": "duelvault" } }' \
+            ${{ vars.KOMODO_API_URL }}/read)
+          echo "Full response: $RESPONSE"
+          IMAGE_VERSION=$(echo "$RESPONSE" | jq -r '"\(.config.version.major).\(.config.version.minor).\(.config.version.patch)"')
+          echo "IMAGE_VERSION=$IMAGE_VERSION" >> $GITHUB_OUTPUT
+          echo "Image version: $IMAGE_VERSION"
+
+      - name: Add Tag to Commit
+        id: add-tag-to-commit
+        run: |
+          IMAGE_VERSION="${{ steps.get-image-version.outputs.IMAGE_VERSION }}"
+          COMMIT_HASH="${{ steps.get-commit-hash.outputs.COMMIT_HASH }}"
+          if [[ "${GITHUB_REF##*/}" == "main" ]]; then
+            TAG="main-v$IMAGE_VERSION-$COMMIT_HASH"
+          else
+            echo "Not a target branch, skipping tag."
+          exit 0
+          fi
+            echo "Tagging commit with: $TAG"
+            git tag "$TAG"
+            git push origin "$TAG"

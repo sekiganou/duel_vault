@@ -1,0 +1,32 @@
+FROM node:20 AS base
+
+WORKDIR /app
+
+COPY package.json ./
+
+RUN npm install
+
+RUN --mount=type=secret,id=DATABASE_URL echo "DATABASE_URL=$(cat /run/secrets/DATABASE_URL)" >> /app/.env
+
+COPY . .
+
+RUN npx prisma generate
+
+RUN npm run build
+
+
+FROM node:20-alpine3.19 AS release
+
+WORKDIR /app
+
+LABEL org.opencontainers.image.source="https://gitea.dojo-vernier.ts.net/sekiganou/duel_vault"
+
+COPY --from=base /app /app
+COPY entrypoint.sh /entrypoint.sh
+
+ENV NODE_ENV=production
+
+EXPOSE 3000
+
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
