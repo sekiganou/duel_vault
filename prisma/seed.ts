@@ -4,17 +4,20 @@ const prisma = new PrismaClient();
 
 async function main() {
   await prisma.$transaction(async (tx) => {
-    const tests = new Array<table_name>();
     for (let index = 0; index < 5; index++) {
-      tests.push({
-        id: index,
-        name: "test".concat("_", index.toString()),
-        create_time: new Date(),
+      await tx.table_name.upsert({
+        where: { id: index },
+        update: {
+          id: index,
+          name: "test".concat("_", index.toString()),
+        },
+        create: {
+          id: index,
+          name: "test".concat("_", index.toString()),
+          create_time: new Date(),
+        },
       });
     }
-    await tx.table_name.createMany({
-      data: tests,
-    });
   });
 }
 

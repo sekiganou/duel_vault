@@ -11,6 +11,7 @@ import { GithubIcon } from "@/components/icons";
 import { useEffect, useState } from "react";
 import { getAllTests } from "@/db/queries/tests";
 import { table_name } from "@/generated/prisma";
+import { Button } from "@heroui/button";
 
 export default function Home() {
   const [tests, setTests] = useState<table_name[]>();
@@ -38,7 +39,6 @@ export default function Home() {
           isExternal
           className={buttonStyles({
             color: "primary",
-            radius: "full",
             variant: "shadow",
           })}
           href={siteConfig.links.docs}
@@ -47,7 +47,7 @@ export default function Home() {
         </Link>
         <Link
           isExternal
-          className={buttonStyles({ variant: "bordered", radius: "full" })}
+          className={buttonStyles({ variant: "bordered" })}
           href={siteConfig.links.github}
         >
           <GithubIcon size={20} />
