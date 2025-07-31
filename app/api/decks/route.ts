@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { withErrorHandler } from "@/lib/middlewares/withErrorHandler";
 import { CreateDeckSchema } from "@/lib/schemas/decks";
-import { minioClient, S3_BUCKET } from "@/s3";
+import { getMinioClient, S3_BUCKET } from "@/s3";
 import { NextRequest, NextResponse } from "next/server";
 import z from "zod";
 
@@ -14,6 +14,8 @@ export const GET = withErrorHandler(async () => {
       format: true,
     },
   });
+
+  const minioClient = getMinioClient();
 
   await Promise.all(
     items.map(async (item) => {
