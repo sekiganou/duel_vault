@@ -1,21 +1,21 @@
-import { PrismaClient, table_name } from "@/generated/prisma";
+import { Format, PrismaClient } from "@/generated/prisma";
+import { FormatDescriptions } from "@/types";
 
 const prisma = new PrismaClient();
 
 async function main() {
   await prisma.$transaction(async (tx) => {
-    for (let index = 0; index < 5; index++) {
-      await tx.table_name.upsert({
+    // { seed formats }
+    const formatDescriptions = Object.values(FormatDescriptions);
+    for (let index = 0; index < formatDescriptions.length; index++) {
+      const format: Format = {
+        id: index,
+        name: formatDescriptions[index],
+      };
+      await tx.format.upsert({
         where: { id: index },
-        update: {
-          id: index,
-          name: "test".concat("_", index.toString()),
-        },
-        create: {
-          id: index,
-          name: "test".concat("_", index.toString()),
-          create_time: new Date(),
-        },
+        update: format,
+        create: format,
       });
     }
   });

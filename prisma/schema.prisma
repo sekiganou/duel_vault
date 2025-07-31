@@ -9,8 +9,162 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model table_name {
-  id          Int       @id @default(autoincrement())
-  create_time DateTime? @db.Date
-  name        String?   @db.VarChar(255)
+model deck {
+  id           Int       @id @default(autoincrement())
+  avatar       String?
+  name         String
+  archetype    Archetype @relation(fields: [archetypeId], references: [id])
+  archetypeId  Int
+  format       Format    @relation(fields: [formatId], references: [id])
+  formatId     Int
+  description  String? 
+  active       Boolean   @default(true)
+  wins         Int       @default(0)
+  losses       Int       @default(0)
+  ties         Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime? @updatedAt
+
+  matchesA     Match[]   @relation("DeckA")
+  matchesB     Match[]   @relation("DeckB")
+  winsAs       Match[]   @relation("Winner")
+
+  tournamentStats TournamentDeckStats[]
+
+  @@map("decks")
 }
+
+model Tournament {
+  id         Int       @id @default(autoincrement())
+  name       String
+  format     Format    @relation(fields: [formatId], references: [id])
+  formatId   Int
+  startDate  DateTime
+  endDate    DateTime?
+  notes      String?
+  link       String?
+  updatedAt  DateTime? @updatedAt
+  createdAt  DateTime  @default(now())
+
+  matches    Match[]
+  deckStats  TournamentDeckStats[]
+
+  @@map("tournaments")
+}
+
+model Match {
+  id            Int       @id @default(autoincrement())
+  tournament    Tournament? @relation(fields: [tournamentId], references: [id])
+  tournamentId  Int?
+
+  deckA         deck      @relation("DeckA", fields: [deckAId], references: [id])
+  deckAId       Int
+
+  deckB         deck      @relation("DeckB", fields: [deckBId], references: [id])
+  deckBId       Int
+
+  winner        deck?     @relation("Winner", fields: [winnerId], references: [id])
+  winnerId      Int?
+
+  deckAScore    Int
+  deckBScore    Int
+  notes         String?
+  date          DateTime
+  updatedAt     DateTime? @updatedAt
+  createdAt     DateTime  @default(now())
+
+  @@map("matches")
+}
+
+model Archetype {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+
+  decks deck[]
+
+  @@map("archetypes")
+}
+
+model Format {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+
+  decks       deck[]
+  tournaments Tournament[]
+
+  @@map("formats")
+}
+
+model TournamentDeckStats {
+  id           Int        @id @default(autoincrement())
+  tournament   Tournament @relation(fields: [tournamentId], references: [id])
+  tournamentId Int
+
+  deck         deck       @relation(fields: [deckId], references: [id])
+  deckId       Int
+
+  finalRank    Int
+  wins         Int
+  losses       Int
+  ties         Int
+
+  @@unique([tournamentId, deckId])
+  @@map("tournament_deck_stats")
+}
+
+
+/*
+Decks
+- id
+- name
+- archetype_id
+- format_id
+- description (null)
+- active (bool)
+- wins
+- losses
+- ties
+- created_at
+- updated_at
+
+Tournaments
+- id
+- name
+- format_id
+- start_date
+- end_date (null)
+- notes (null)
+- link (null)
+- updated_at
+- created_at
+
+Matches
+- id
+- tournament_id (null if friendly match)
+- deck_a_id
+- deck_b_id
+- winner_id (null if tie)
+- deck_a_score (number)
+- deck_b_score (number)
+- notes (null)
+- date
+- updated_at
+- created_at
+
+Archetypes
+- id
+- name
+
+Formats
+- id
+- name
+
+TournamentDeckStats
+- id
+- tournament_id
+- deck_id
+- final_rank (number)
+- wins
+- losses
+- ties
+*/

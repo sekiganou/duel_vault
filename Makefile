@@ -11,7 +11,7 @@ down:
 	docker compose -f ${COMPOSE} down
 
 build:
-	docker compose -f ${COMPOSE} build
+	docker compose -f ${COMPOSE} build && docker system prune -f
 
 restart:
 	docker compose -f ${COMPOSE} down && docker compose -f ${COMPOSE} up

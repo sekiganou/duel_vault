@@ -2,14 +2,22 @@ services:
   db:
     image: postgres:latest
     restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: mydb
+    env_file: ".env.local"
     volumes:
       - db_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+
+  s3:
+    image: quay.io/minio/minio
+    restart: always
+    volumes:
+      - s3_data:/var/lib/minio/data
+    command: server /var/lib/minio/data --console-address ":9001"
+    env_file: ".env.local"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
 
   web:
     build:
@@ -18,12 +26,13 @@ services:
     image: gitea.dojo-vernier.ts.net/duelvault:dev
     depends_on:
       - db
+      - s3
     ports:
       - "3000:3000"
-    environment:
-      DATABASE_URL: postgres://postgres:password@db:5432/mydb
+    env_file: ".env.local"
     volumes:
       - .:/app
 
 volumes:
   db_data:
+  s3_data:

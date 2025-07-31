@@ -6,8 +6,6 @@ COPY package.json ./
 
 RUN npm install
 
-RUN --mount=type=secret,id=DATABASE_URL echo "DATABASE_URL=$(cat /run/secrets/DATABASE_URL)" >> /app/.env
-
 COPY . .
 
 RUN npx prisma generate
