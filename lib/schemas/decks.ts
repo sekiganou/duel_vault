@@ -1,8 +1,10 @@
 import z from "zod";
 
-export const CreateDeckSchema = z.object({
+export const UpsertDeckSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
-  formatId: z.number(),
   archetypeId: z.number(),
+  formatId: z.number(),
   description: z.string().nullable(),
+  active: z.boolean(),
+  avatar: z.string().nullable(),
 });

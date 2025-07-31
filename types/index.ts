@@ -12,3 +12,14 @@ export const FormatDescriptions = {
   Standard: "Standard",
   RushDuel: "Rush Duel",
 } as const;
+
+export type TableColumnDescriptor = {
+  name: string;
+  uid: string;
+  sortable: boolean;
+};
+
+export type StatusOptionDescriptor = {
+  name: string;
+  uid: string;
+};

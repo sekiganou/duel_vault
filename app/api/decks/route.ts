@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { withErrorHandler } from "@/lib/middlewares/withErrorHandler";
-import { CreateDeckSchema } from "@/lib/schemas/decks";
+import { UpsertDeckSchema } from "@/lib/schemas/decks";
 import { getMinioClient, S3_BUCKET } from "@/s3";
 import { NextRequest, NextResponse } from "next/server";
 import z from "zod";
@@ -15,15 +15,15 @@ export const GET = withErrorHandler(async () => {
     },
   });
 
-  const minioClient = getMinioClient();
+  const minio = getMinioClient();
 
   await Promise.all(
     items.map(async (item) => {
       if (item.avatar) {
-        item.avatar = await minioClient.presignedGetObject(
+        item.avatar = await minio.presignedGetObject(
           S3_BUCKET,
           item.avatar,
-          60 * 60
+          60
         );
       }
     })
@@ -34,11 +34,11 @@ export const GET = withErrorHandler(async () => {
 
 export const POST = withErrorHandler(async (req: NextRequest) => {
   const body = await req.json();
-  const parsed = CreateDeckSchema.safeParse(body);
+  const parsed = UpsertDeckSchema.safeParse(body);
 
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Validation failed", details: z.treeifyError(parsed.error) },
+      { error: "Validation Error", details: z.treeifyError(parsed.error) },
       { status: 400 }
     );
   }

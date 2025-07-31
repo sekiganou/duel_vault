@@ -1,3 +1,4 @@
+import { addToast } from "@heroui/toast";
 import { NextRequest, NextResponse } from "next/server";
 
 type Handler = (req: NextRequest) => Promise<NextResponse>;
