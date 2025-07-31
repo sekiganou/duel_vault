@@ -67,7 +67,7 @@ const INITIAL_VISIBLE_COLUMNS = [
   "actions",
 ];
 
-export const statusOptions = [
+const statusOptions = [
   { name: "Active", uid: "active" },
   { name: "Inactive", uid: "inactive" },
 ];
