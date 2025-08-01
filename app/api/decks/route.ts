@@ -17,17 +17,19 @@ export const GET = withErrorHandler(async () => {
 
   const minio = getMinioClient();
 
-  await Promise.all(
-    items.map(async (item) => {
-      if (item.avatar) {
-        item.avatar = await minio.presignedGetObject(
-          S3_BUCKET,
-          item.avatar,
-          60
-        );
-      }
-    })
-  );
+  const bucketExists = await minio.bucketExists(S3_BUCKET);
+  if (bucketExists)
+    await Promise.all(
+      items.map(async (item) => {
+        if (item.avatar) {
+          item.avatar = await minio.presignedGetObject(
+            S3_BUCKET,
+            item.avatar,
+            60 * 60 * 24
+          );
+        }
+      })
+    );
 
   return NextResponse.json(items);
 });
@@ -43,11 +45,14 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     );
   }
 
-  const newItem = await schema.create({
-    data: parsed.data,
+  const { id, ...dataWithoutId } = parsed.data;
+  const item = await schema.upsert({
+    where: { id: id ?? -1 },
+    create: dataWithoutId,
+    update: dataWithoutId,
   });
 
-  return NextResponse.json({ success: true, item: newItem });
+  return NextResponse.json({ success: true, item: item });
 });
 
 export const DELETE = withErrorHandler(async (req: NextRequest) => {

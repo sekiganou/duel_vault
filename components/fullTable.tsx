@@ -295,7 +295,7 @@ export const FullTable = <T,>(props: FullTableProps<T>) => {
     <>
       <Table
         isHeaderSticky
-        aria-label="Decks Table"
+        aria-label="Full Table"
         bottomContent={bottomContent}
         bottomContentPlacement="outside"
         classNames={{

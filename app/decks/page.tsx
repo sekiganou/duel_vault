@@ -1,7 +1,11 @@
 "use client";
 
 import { Archetype, Format } from "@/generated/prisma";
-import { createDeck, getAllDecks } from "@/lib/api/decks";
+import {
+  upsertDeck as upsertDeck,
+  getAllDecks,
+  deleteDeck,
+} from "@/lib/api/decks";
 import { Deck, StatusOptionDescriptor, TableColumnDescriptor } from "@/types";
 import { User } from "@heroui/user";
 import { Selection } from "@react-types/shared";
@@ -15,7 +19,7 @@ import {
 import { ChangeEvent, Key, useCallback, useEffect, useState } from "react";
 import { Button } from "@heroui/button";
 import { Chip, ChipProps } from "@heroui/chip";
-import { IconDotsVertical, IconPlus } from "@tabler/icons-react";
+import { IconDotsVertical, IconPlus, IconTrash } from "@tabler/icons-react";
 import { Input } from "@heroui/input";
 import {
   Modal,
@@ -62,18 +66,75 @@ const statusOptions: StatusOptionDescriptor[] = [
 
 const getStatus = (deck: Deck) => (deck.active ? "active" : "inactive");
 
+const extractFileName = (avatar: string): string =>
+  avatar.substring(avatar.lastIndexOf("/") + 1).split("?")[0];
+
 const statusColorMap: Record<string, ChipProps["color"]> = {
   active: "success",
   inactive: "danger",
 };
 
-const CreateModal = ({
+const DeleteModal = ({
+  isOpen,
+  onOpenChange,
+  deck,
+  handleGetAllDecks,
+}: {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  deck: Deck | null;
+  handleGetAllDecks: () => Promise<void>;
+}) => {
+  const [loadingDelete, setLoadingDelete] = useState(false);
+
+  const handleDelete = () => {
+    if (!deck) return;
+
+    setLoadingDelete(true);
+    deleteDeck(deck.id, deck.avatar && extractFileName(deck.avatar))
+      .then(() => {
+        handleGetAllDecks();
+        onOpenChange(false);
+      })
+      .finally(() => setLoadingDelete(false));
+  };
+
+  return (
+    <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
+      <ModalContent>
+        {(onClose) => (
+          <>
+            <ModalHeader>Delete Deck</ModalHeader>
+            <ModalBody>
+              Are you sure you want to delete the deck "{deck?.name}"?
+            </ModalBody>
+            <ModalFooter>
+              <Button variant="light" color="primary" onPress={onClose}>
+                Cancel
+              </Button>
+              <Button
+                color="danger"
+                onPress={handleDelete}
+                isLoading={loadingDelete}
+              >
+                Delete
+              </Button>
+            </ModalFooter>
+          </>
+        )}
+      </ModalContent>
+    </Modal>
+  );
+};
+
+const UpsertModal = ({
   isOpen,
   onOpenChange,
   formats,
   archetypes,
   handleGetAllDecks,
   handleGetAllArchetypes,
+  deck,
 }: {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
@@ -81,8 +142,10 @@ const CreateModal = ({
   archetypes: Archetype[];
   handleGetAllDecks: () => Promise<void>;
   handleGetAllArchetypes: () => Promise<void>;
+  deck: Deck | null;
 }) => {
-  const [deckAvatarName, setDeckAvatarName] = useState("");
+  const isEdit = deck;
+  const [deckAvatarName, setDeckAvatarName] = useState<string | null>(null);
   const [deckAvatarFile, setDeckAvatarFile] = useState<File | null>(null);
   const [deckName, setDeckName] = useState("");
   const [deckDescription, setDeckDescription] = useState("");
@@ -99,13 +162,23 @@ const CreateModal = ({
   }, [isOpen]);
 
   const handleReset = () => {
+    if (deck) {
+      setDeckAvatarName(deck.avatar ?? "");
+      setDeckName(deck.name);
+      setDeckDescription(deck.description ?? "");
+      setDeckIsActive(deck.active);
+      setDeckArchetypeId(deck.archetypeId.toString());
+      setDeckFormatId(deck.formatId.toString());
+    } else {
+      setDeckAvatarName(null);
+      setDeckName("");
+      setDeckDescription("");
+      setDeckIsActive(true);
+      setDeckArchetypeId(null);
+      setDeckFormatId("");
+    }
     setDeckAvatarFile(null);
-    setDeckAvatarName("");
-    setDeckName("");
-    setDeckDescription("");
-    setDeckFormatId("");
-    setDeckArchetypeId("");
-    setDeckIsActive(true);
+    setDeckNameInputError("");
   };
 
   const handleCreateAndSetArchetype = () => {
@@ -119,15 +192,18 @@ const CreateModal = ({
 
   const handleCreateDeck = () => {
     setLoadingCreateDeck(true);
-    createDeck(
+    upsertDeck(
       {
+        id: deck?.id ?? null,
         name: deckName,
         formatId: Number(deckFormatId),
         archetypeId: Number(deckArchetypeId),
         description: deckDescription,
         active: deckIsActive,
       },
-      deckAvatarFile
+      deckAvatarFile,
+      deck?.avatar ? extractFileName(deck.avatar) : null
+      // deckAvatarName ? extractFileName(deckAvatarName) : null
     )
       .then(() => {
         handleGetAllDecks();
@@ -138,13 +214,25 @@ const CreateModal = ({
       });
   };
 
+  const getInputFilename = (): HTMLInputElement | null => {
+    if (typeof document === "undefined") return null;
+    return document.querySelector<HTMLInputElement>('input[type="file"]');
+  };
+
+  const handleClearAvatar = () => {
+    setDeckAvatarName(null);
+    setDeckAvatarFile(null);
+    const input = getInputFilename();
+    if (input) input.value = "";
+  };
+
   return (
     <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
       <ModalContent>
         {(onClose) => (
           <>
             <ModalHeader className="flex flex-col gap-1 text-xl font-semibold">
-              Add New Deck
+              {isEdit ? "Edit" : "Add New"} Deck {isEdit ? deck.name : ""}
             </ModalHeader>
 
             <ModalBody className="space-y-4">
@@ -153,7 +241,9 @@ const CreateModal = ({
                   <Avatar
                     radius="lg"
                     src={
-                      deckAvatarFile ? URL.createObjectURL(deckAvatarFile) : ""
+                      deckAvatarFile
+                        ? URL.createObjectURL(deckAvatarFile)
+                        : (deckAvatarName ?? "")
                     }
                     alt="Avatar Preview"
                     className="w-20 h-20"
@@ -164,18 +254,24 @@ const CreateModal = ({
                     type="file"
                     label="Avatar"
                     className="w-full"
+                    accept="image/*"
                     onChange={(e) => {
                       const file = e.target.files?.[0] || null;
                       setDeckAvatarFile(file);
                       setDeckAvatarName(e.target.value);
                     }}
                     isClearable
-                    onClear={() => {
-                      setDeckAvatarName("");
-                      setDeckAvatarFile(null);
-                    }}
+                    onClear={handleClearAvatar}
                   />
                 </div>
+                <Button
+                  isIconOnly
+                  variant="light"
+                  onPress={handleClearAvatar}
+                  isDisabled={!deckAvatarName}
+                >
+                  <IconTrash size={24} />
+                </Button>
               </div>
 
               <div className="flex flex-col gap-4 max-w-md">
@@ -193,7 +289,7 @@ const CreateModal = ({
                   }}
                   onClear={() => {
                     setDeckName("");
-                    setDeckNameInputError("Please fill out this field."); // optional
+                    setDeckNameInputError("Please fill out this field.");
                   }}
                   isInvalid={!!deckNameInputError}
                   errorMessage={deckNameInputError}
@@ -297,10 +393,21 @@ export default function DecksPage() {
   const [formats, setFormats] = useState(new Array<Format>());
   const [archetypes, setArchetypes] = useState(new Array<Archetype>());
   const [loadingDecks, setLoadingDecks] = useState(false);
+  const [selectedDeck, setSelectedDeck] = useState<Deck | null>(null);
   const {
     isOpen: isOpenCreateModal,
     onOpen: onOpenCreateModal,
     onOpenChange: onOpenCreateModalChange,
+  } = useDisclosure();
+  const {
+    isOpen: isOpenDeleteModal,
+    onOpen: onOpenDeleteModal,
+    onOpenChange: onOpenDeleteModalChange,
+  } = useDisclosure();
+  const {
+    isOpen: isOpenEditModal,
+    onOpen: onOpenEditModal,
+    onOpenChange: onOpenEditModalChange,
   } = useDisclosure();
 
   const handleGetAllDecks = () =>
@@ -368,8 +475,26 @@ export default function DecksPage() {
               </DropdownTrigger>
               <DropdownMenu>
                 <DropdownItem key="view">View</DropdownItem>
-                <DropdownItem key="edit">Edit</DropdownItem>
-                <DropdownItem key="delete">Delete</DropdownItem>
+                <DropdownItem
+                  key="edit"
+                  onPress={() => {
+                    setSelectedDeck(deck);
+                    onOpenEditModal();
+                  }}
+                >
+                  Edit
+                </DropdownItem>
+                <DropdownItem
+                  key="delete"
+                  color="danger"
+                  className="text-danger"
+                  onPress={() => {
+                    setSelectedDeck(deck);
+                    onOpenDeleteModal();
+                  }}
+                >
+                  Delete
+                </DropdownItem>
               </DropdownMenu>
             </Dropdown>
           </div>
@@ -396,13 +521,29 @@ export default function DecksPage() {
           }
           getItemKey={(deck: Deck) => deck.id}
         />
-        <CreateModal
+        <UpsertModal
           isOpen={isOpenCreateModal}
           onOpenChange={onOpenCreateModalChange}
           formats={formats}
           archetypes={archetypes}
           handleGetAllDecks={handleGetAllDecks}
           handleGetAllArchetypes={handleGetAllArchetypes}
+          deck={null}
+        />
+        <UpsertModal
+          isOpen={isOpenEditModal}
+          onOpenChange={onOpenEditModalChange}
+          formats={formats}
+          archetypes={archetypes}
+          handleGetAllDecks={handleGetAllDecks}
+          handleGetAllArchetypes={handleGetAllArchetypes}
+          deck={selectedDeck}
+        />
+        <DeleteModal
+          isOpen={isOpenDeleteModal}
+          onOpenChange={onOpenDeleteModalChange}
+          deck={selectedDeck}
+          handleGetAllDecks={handleGetAllDecks}
         />
       </>
     )

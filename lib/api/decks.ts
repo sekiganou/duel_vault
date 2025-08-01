@@ -4,7 +4,7 @@ import { UpsertDeckSchema } from "../schemas/decks";
 import { Deck } from "@/types";
 import { getMinioClient } from "@/s3";
 import { addToast } from "@heroui/toast";
-import { uploadToMinio } from "./minio";
+import { deleteFile, uploadFile } from "./minio";
 
 const basePath = "/api/decks";
 
@@ -13,24 +13,32 @@ export async function getAllDecks(): Promise<Deck[]> {
   return res.data;
 }
 
-export async function createDeck(
+export async function upsertDeck(
   deck: {
+    id: number | null;
     name: string;
     formatId: number;
     archetypeId: number;
     description: string | null;
     active: boolean;
   },
-  file: File | null
+  avatarFile: File | null,
+  currentAvatar: string | null
 ) {
   try {
-    const avatar = file && (await uploadToMinio(file));
-    const validateDeck = UpsertDeckSchema.parse({ ...deck, avatar });
+    if (currentAvatar) await deleteFile(currentAvatar);
+
+    const avatarName = avatarFile ? await uploadFile(avatarFile) : null;
+    const validateDeck = UpsertDeckSchema.parse({
+      ...deck,
+      avatar: avatarName,
+    });
+
     const response = await axios.post(basePath, validateDeck);
 
-    console.log("Deck created:", response.data);
+    console.log(`Deck updated: `, response.data);
     addToast({
-      title: "Deck created successfully!",
+      title: `Deck updated successfully!`,
       color: "success",
     });
   } catch (error) {
@@ -40,22 +48,32 @@ export async function createDeck(
       console.error(" Axios or Network Error:", error);
     }
     addToast({
-      title: "Failed to create deck. Please try again",
+      title: `Failed to update deck. Please try again`,
       color: "danger",
     });
   }
 }
 
-export async function updateDeck(
-  id: number,
-  data: {
-    name: string;
-    formatId: number;
-    archetypeId: number;
-    description: string | null;
-  }
-) {}
+export async function deleteDeck(id: number, filename: string | null) {
+  try {
+    if (filename) {
+      await deleteFile(filename);
+      console.log(`File ${filename} deleted successfully.`);
+    }
 
-export async function deleteDeck(id: number) {
-  await axios.delete(`${basePath}?id=${id}`);
+    await axios.delete(`${basePath}?id=${id}&filename=${filename}`);
+    console.log(`Deck with ID ${id} deleted successfully.`);
+
+    addToast({
+      title: `Deck deleted successfully!`,
+      color: "success",
+    });
+  } catch (error) {
+    console.error("Error deleting deck:", error);
+    addToast({
+      title: `Failed to delete deck. Please try again`,
+      color: "danger",
+    });
+    return;
+  }
 }
