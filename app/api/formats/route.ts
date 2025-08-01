@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { withErrorHandler } from "@/lib/middlewares/withErrorHandler";
-import { CreateArchetypeSchema } from "@/lib/schemas/archetypes";
+import { UpsertArchetypeSchema } from "@/lib/schemas/archetypes";
 import { NextRequest, NextResponse } from "next/server";
 import z from "zod";
 
@@ -13,7 +13,7 @@ export const GET = withErrorHandler(async () => {
 
 export const POST = withErrorHandler(async (req: NextRequest) => {
   const body = await req.json();
-  const parsed = CreateArchetypeSchema.safeParse(body);
+  const parsed = UpsertArchetypeSchema.safeParse(body);
 
   if (!parsed.success) {
     return NextResponse.json(

@@ -1,7 +1,10 @@
 import axios from "axios";
 import { z } from "zod";
-import { CreateDeckSchema } from "../schemas/decks";
+import { UpsertDeckSchema } from "../schemas/decks";
 import { Deck } from "@/types";
+import { getMinioClient } from "@/s3";
+import { addToast } from "@heroui/toast";
+import { deleteFile, uploadFile } from "./minio";
 
 const basePath = "/api/decks";
 
@@ -10,35 +13,67 @@ export async function getAllDecks(): Promise<Deck[]> {
   return res.data;
 }
 
-export async function createDeck(data: {
-  name: string;
-  formatId: number;
-  archetypeId: number;
-  description: string | null;
-}) {
+export async function upsertDeck(
+  deck: {
+    id: number | null;
+    name: string;
+    formatId: number;
+    archetypeId: number;
+    description: string | null;
+    active: boolean;
+  },
+  avatarFile: File | null,
+  currentAvatar: string | null
+) {
   try {
-    const validateDeck = CreateDeckSchema.parse(data);
+    if (currentAvatar) await deleteFile(currentAvatar);
+
+    const avatarName = avatarFile ? await uploadFile(avatarFile) : null;
+    const validateDeck = UpsertDeckSchema.parse({
+      ...deck,
+      avatar: avatarName,
+    });
+
     const response = await axios.post(basePath, validateDeck);
-    console.log("Deck created:", response.data);
+
+    console.log(`Deck updated: `, response.data);
+    addToast({
+      title: `Deck updated successfully!`,
+      color: "success",
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       console.error(" Validation Error:", error.message);
     } else {
       console.error(" Axios or Network Error:", error);
     }
+    addToast({
+      title: `Failed to update deck. Please try again`,
+      color: "danger",
+    });
   }
 }
 
-export async function updateDeck(
-  id: number,
-  data: {
-    name: string;
-    formatId: number;
-    archetypeId: number;
-    description: string | null;
-  }
-) {}
+export async function deleteDeck(id: number, filename: string | null) {
+  try {
+    if (filename) {
+      await deleteFile(filename);
+      console.log(`File ${filename} deleted successfully.`);
+    }
 
-export async function deleteDeck(id: number) {
-  await axios.delete(`${basePath}?id=${id}`);
+    await axios.delete(`${basePath}?id=${id}&filename=${filename}`);
+    console.log(`Deck with ID ${id} deleted successfully.`);
+
+    addToast({
+      title: `Deck deleted successfully!`,
+      color: "success",
+    });
+  } catch (error) {
+    console.error("Error deleting deck:", error);
+    addToast({
+      title: `Failed to delete deck. Please try again`,
+      color: "danger",
+    });
+    return;
+  }
 }

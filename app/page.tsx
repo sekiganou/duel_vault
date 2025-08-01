@@ -10,7 +10,7 @@ import { title, subtitle } from "@/components/primitives";
 import { User } from "@heroui/user";
 import { useEffect, useState } from "react";
 import { Button } from "@heroui/button";
-import { createDeck, deleteDeck, getAllDecks } from "@/lib/api/decks";
+import { upsertDeck, deleteDeck, getAllDecks } from "@/lib/api/decks";
 import { IconTrash } from "@tabler/icons-react";
 import { Deck } from "@/types";
 

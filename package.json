@@ -30,6 +30,7 @@
     "@heroui/system": "2.4.20",
     "@heroui/table": "^2.2.24",
     "@heroui/theme": "2.4.20",
+    "@heroui/toast": "^2.0.14",
     "@heroui/user": "^2.2.20",
     "@prisma/client": "^6.13.0",
     "@react-aria/ssr": "3.9.10",
