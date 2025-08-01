@@ -1,6 +1,6 @@
 import * as Minio from "minio";
 
-export const S3_BUCKET = "duel-vault";
+export const S3_BUCKET = "duel-vault-2";
 
 let cachedMinioclient: Minio.Client | null = null;
 
@@ -14,7 +14,7 @@ export const getMinioClient = () => {
     new Minio.Client({
       endPoint: process.env.MINIO_HOST,
       port: 9000,
-      useSSL: process.env.NODE_ENV !== "development",
+      useSSL: false,
       accessKey: process.env.MINIO_ROOT_USER,
       secretKey: process.env.MINIO_ROOT_PASSWORD,
     })

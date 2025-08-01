@@ -54,14 +54,14 @@ export async function upsertDeck(
   }
 }
 
-export async function deleteDeck(id: number, filename: string | null) {
+export async function deleteDeck(id: number, avatar: string | null) {
   try {
-    if (filename) {
-      await deleteFile(filename);
-      console.log(`File ${filename} deleted successfully.`);
+    if (avatar) {
+      await deleteFile(avatar);
+      console.log(`File ${avatar} deleted successfully.`);
     }
 
-    await axios.delete(`${basePath}?id=${id}&filename=${filename}`);
+    await axios.delete(`${basePath}?id=${id}`);
     console.log(`Deck with ID ${id} deleted successfully.`);
 
     addToast({
