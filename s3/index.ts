@@ -14,7 +14,7 @@ export const getMinioClient = () => {
     new Minio.Client({
       endPoint: process.env.MINIO_HOST,
       port: 9000,
-      useSSL: false,
+      useSSL: process.env.NODE_ENV === "production",
       accessKey: process.env.MINIO_ROOT_USER,
       secretKey: process.env.MINIO_ROOT_PASSWORD,
     })
