@@ -36,7 +36,6 @@ export async function upsertDeck(
 
     const response = await axios.post(basePath, validateDeck);
 
-    console.log(`Deck updated: `, response.data);
     addToast({
       title: `Deck updated successfully!`,
       color: "success",
@@ -56,13 +55,9 @@ export async function upsertDeck(
 
 export async function deleteDeck(id: number, avatar: string | null) {
   try {
-    if (avatar) {
-      await deleteFile(avatar);
-      console.log(`File ${avatar} deleted successfully.`);
-    }
+    if (avatar) await deleteFile(avatar);
 
     await axios.delete(`${basePath}?id=${id}`);
-    console.log(`Deck with ID ${id} deleted successfully.`);
 
     addToast({
       title: `Deck deleted successfully!`,

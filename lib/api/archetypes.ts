@@ -15,7 +15,6 @@ export async function createArchetype(archetype: { name: string }) {
   try {
     const validateArchetype = UpsertArchetypeSchema.parse(archetype);
     const response = await axios.post(basePath, validateArchetype);
-    console.log("Archetype created:", response.data);
     addToast({
       title: "Archetype created successfully!",
       color: "success",
