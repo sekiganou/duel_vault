@@ -37,6 +37,8 @@ import { Autocomplete, AutocompleteItem } from "@heroui/autocomplete";
 import { FullTable } from "@/components/fullTable";
 import { Avatar } from "@heroui/avatar";
 import { addToast } from "@heroui/toast";
+import { useRouter } from "next/navigation";
+import { Tooltip } from "@heroui/tooltip";
 
 const columns: TableColumnDescriptor[] = [
   { name: "ID", uid: "id", sortable: true },
@@ -64,14 +66,14 @@ const statusOptions: StatusOptionDescriptor[] = [
   { name: "Inactive", uid: "inactive" },
 ];
 
-const getStatus = (deck: Deck) => (deck.active ? "active" : "inactive");
+export const getStatus = (deck: Deck) => (deck.active ? "active" : "inactive");
 
 const extractFileName = (avatar: string): string =>
   avatar.substring(avatar.lastIndexOf("/") + 1).split("?")[0];
 
-const statusColorMap: Record<string, ChipProps["color"]> = {
+export const statusColorMap: Record<string, ChipProps["color"]> = {
   active: "success",
-  inactive: "danger",
+  inactive: "default",
 };
 
 const DeleteModal = ({
@@ -106,10 +108,13 @@ const DeleteModal = ({
           <>
             <ModalHeader>Delete Deck</ModalHeader>
             <ModalBody>
-              Are you sure you want to delete the deck "{deck?.name}"?
+              <p>
+                Are you sure you want to delete the deck{" "}
+                <strong>{deck?.name}</strong>?
+              </p>
             </ModalBody>
             <ModalFooter>
-              <Button variant="light" color="primary" onPress={onClose}>
+              <Button variant="light" color="default" onPress={onClose}>
                 Cancel
               </Button>
               <Button
@@ -144,14 +149,14 @@ const UpsertModal = ({
   handleGetAllArchetypes: () => Promise<void>;
   deck: Deck | null;
 }) => {
-  const isEdit = deck;
+  const isEdit = !!deck;
   const [deckAvatarName, setDeckAvatarName] = useState<string | null>(null);
   const [deckAvatarFile, setDeckAvatarFile] = useState<File | null>(null);
   const [deckName, setDeckName] = useState("");
   const [deckDescription, setDeckDescription] = useState("");
   const [deckIsActive, setDeckIsActive] = useState(true);
   const [deckArchetypeId, setDeckArchetypeId] = useState<Key | null>("");
-  const [deckFormatId, setDeckFormatId] = useState<string>("");
+  const [deckFormatId, setDeckFormatId] = useState("");
   const [archetypeName, setArchetypeName] = useState("");
   const [loadingCreateDeck, setLoadingCreateDeck] = useState(false);
   const [deckNameInputError, setDeckNameInputError] = useState("");
@@ -162,7 +167,7 @@ const UpsertModal = ({
   }, [isOpen]);
 
   const handleReset = () => {
-    if (deck) {
+    if (isEdit) {
       setDeckAvatarName(deck.avatar ?? "");
       setDeckName(deck.name);
       setDeckDescription(deck.description ?? "");
@@ -174,7 +179,7 @@ const UpsertModal = ({
       setDeckName("");
       setDeckDescription("");
       setDeckIsActive(true);
-      setDeckArchetypeId(null);
+      setDeckArchetypeId("");
       setDeckFormatId("");
     }
     setDeckAvatarFile(null);
@@ -202,8 +207,8 @@ const UpsertModal = ({
         active: deckIsActive,
       },
       deckAvatarFile,
-      deck?.avatar ? extractFileName(deck.avatar) : null
-      // deckAvatarName ? extractFileName(deckAvatarName) : null
+      deck?.avatar ? extractFileName(deck.avatar) : null,
+      deckAvatarName ? extractFileName(deckAvatarName) : null
     )
       .then(() => {
         handleGetAllDecks();
@@ -264,18 +269,21 @@ const UpsertModal = ({
                     onClear={handleClearAvatar}
                   />
                 </div>
-                <Button
-                  isIconOnly
-                  variant="light"
-                  onPress={handleClearAvatar}
-                  isDisabled={!deckAvatarName}
-                >
-                  <IconTrash size={24} />
-                </Button>
+                <Tooltip content="Clear Avatar">
+                  <Button
+                    isIconOnly
+                    variant="light"
+                    onPress={handleClearAvatar}
+                    isDisabled={!deckAvatarName}
+                  >
+                    <IconTrash size={24} />
+                  </Button>
+                </Tooltip>
               </div>
 
               <div className="flex flex-col gap-4 max-w-md">
                 <Input
+                  placeholder="Add a name"
                   type="text"
                   label="Name"
                   isRequired
@@ -296,7 +304,8 @@ const UpsertModal = ({
                 />
                 <Input
                   type="text"
-                  label="Description"
+                  placeholder="Add a description"
+                  label="Description (optional)"
                   value={deckDescription}
                   onValueChange={setDeckDescription}
                   isClearable
@@ -306,6 +315,7 @@ const UpsertModal = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
                 <Autocomplete
+                  placeholder="Select or create archetype"
                   defaultItems={archetypes}
                   label="Archetype"
                   isRequired
@@ -337,6 +347,7 @@ const UpsertModal = ({
                 <Select
                   label="Format"
                   isRequired
+                  placeholder="Select format"
                   selectedKeys={[deckFormatId]}
                   onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                     setDeckFormatId(e.target.value)
@@ -362,9 +373,9 @@ const UpsertModal = ({
               </div>
             </ModalBody>
 
-            <ModalFooter className="flex justify-between">
-              <Button variant="light" color="danger" onPress={onClose}>
-                Close
+            <ModalFooter>
+              <Button variant="light" color="default" onPress={onClose}>
+                Cancel
               </Button>
               <Button
                 color="primary"
@@ -377,7 +388,7 @@ const UpsertModal = ({
                   loadingCreateDeck
                 }
               >
-                Save
+                {isEdit ? "Update Deck" : "Create Deck"}
               </Button>
             </ModalFooter>
           </>
@@ -388,12 +399,12 @@ const UpsertModal = ({
 };
 
 export default function DecksPage() {
-  const [isClient, setIsClient] = useState(false);
   const [decks, setDecks] = useState(new Array<Deck>());
   const [formats, setFormats] = useState(new Array<Format>());
   const [archetypes, setArchetypes] = useState(new Array<Archetype>());
-  const [loadingDecks, setLoadingDecks] = useState(false);
+  const [loadingDecks, setLoadingDecks] = useState(true);
   const [selectedDeck, setSelectedDeck] = useState<Deck | null>(null);
+  const router = useRouter();
   const {
     isOpen: isOpenCreateModal,
     onOpen: onOpenCreateModal,
@@ -415,137 +426,143 @@ export default function DecksPage() {
       .then(setDecks)
       .finally(() => {
         setLoadingDecks(false);
-        setIsClient(true);
       });
 
   const handleGetAllArchetypes = () => getAllArchetypes().then(setArchetypes);
 
   useEffect(() => {
-    setLoadingDecks(true);
-    handleGetAllDecks();
-    handleGetAllArchetypes();
-    getAllFormats().then(setFormats);
-  }, []);
-
-  const renderCell = useCallback((deck: Deck, columnKey: React.Key) => {
-    const cellValue = deck[columnKey as keyof Deck];
-
-    switch (columnKey) {
-      case "name":
-        return (
-          <User
-            avatarProps={{
-              radius: "lg",
-              src: deck.avatar?.toString(),
-              showFallback: true,
-              className: "hidden md:block shrink-0",
-            }}
-            description={deck.archetype.name}
-            name={deck.name}
-            classNames={{ name: "text-bold text-small capitalize" }}
-          >
-            {deck.name}
-          </User>
-        );
-      case "format":
-        return (
-          <span className="text-bold text-small capitalize">
-            {deck.format.name}
-          </span>
-        );
-      case "active":
-        return (
-          <Chip
-            className="capitalize"
-            variant="flat"
-            color={statusColorMap[getStatus(deck)]}
-            size="sm"
-          >
-            {getStatus(deck)}
-          </Chip>
-        );
-      case "actions":
-        return (
-          <div className="relative flex justify-end items-center gap-2">
-            <Dropdown>
-              <DropdownTrigger>
-                <Button isIconOnly size="sm" variant="light">
-                  <IconDotsVertical className="text-default-300" />
-                </Button>
-              </DropdownTrigger>
-              <DropdownMenu>
-                <DropdownItem key="view">View</DropdownItem>
-                <DropdownItem
-                  key="edit"
-                  onPress={() => {
-                    setSelectedDeck(deck);
-                    onOpenEditModal();
-                  }}
-                >
-                  Edit
-                </DropdownItem>
-                <DropdownItem
-                  key="delete"
-                  color="danger"
-                  className="text-danger"
-                  onPress={() => {
-                    setSelectedDeck(deck);
-                    onOpenDeleteModal();
-                  }}
-                >
-                  Delete
-                </DropdownItem>
-              </DropdownMenu>
-            </Dropdown>
-          </div>
-        );
-      default:
-        return <span>{cellValue?.toString()}</span>;
+    async function fetchData() {
+      handleGetAllDecks();
+      handleGetAllArchetypes();
+      getAllFormats().then(setFormats);
     }
+
+    fetchData();
   }, []);
+
+  const renderCell = useCallback(
+    (deck: Deck, columnKey: React.Key) => {
+      const cellValue = deck[columnKey as keyof Deck];
+
+      switch (columnKey) {
+        case "name":
+          return (
+            <User
+              avatarProps={{
+                radius: "lg",
+                src: deck.avatar?.toString(),
+                showFallback: true,
+                className: "hidden md:block shrink-0",
+              }}
+              description={deck.archetype.name}
+              name={deck.name}
+              classNames={{ name: "text-bold text-small capitalize" }}
+            >
+              {deck.name}
+            </User>
+          );
+        case "format":
+          return (
+            <span className="text-bold text-small capitalize">
+              {deck.format.name}
+            </span>
+          );
+        case "active":
+          return (
+            <Chip
+              className="capitalize"
+              variant="flat"
+              color={statusColorMap[getStatus(deck)]}
+              size="sm"
+            >
+              {getStatus(deck)}
+            </Chip>
+          );
+        case "actions":
+          return (
+            <div className="relative flex justify-end items-center gap-2">
+              <Dropdown>
+                <DropdownTrigger>
+                  <Button isIconOnly size="sm" variant="light">
+                    <IconDotsVertical className="text-default-300" />
+                  </Button>
+                </DropdownTrigger>
+                <DropdownMenu>
+                  <DropdownItem
+                    key="view"
+                    onPress={() => router.push(`/decks/${deck.id}`)}
+                  >
+                    View
+                  </DropdownItem>
+                  <DropdownItem
+                    key="edit"
+                    onPress={() => {
+                      setSelectedDeck(deck);
+                      onOpenEditModal();
+                    }}
+                  >
+                    Edit
+                  </DropdownItem>
+                  <DropdownItem
+                    key="delete"
+                    color="danger"
+                    className="text-danger"
+                    onPress={() => {
+                      setSelectedDeck(deck);
+                      onOpenDeleteModal();
+                    }}
+                  >
+                    Delete
+                  </DropdownItem>
+                </DropdownMenu>
+              </Dropdown>
+            </div>
+          );
+        default:
+          return <span>{cellValue?.toString()}</span>;
+      }
+    },
+    [onOpenEditModal, onOpenDeleteModal]
+  );
 
   return (
-    isClient && (
-      <>
-        <FullTable
-          columns={columns}
-          initialVisibleColumns={INITIAL_VISIBLE_COLUMNS}
-          statusOptions={statusOptions}
-          items={decks}
-          loadingItems={loadingDecks}
-          renderCell={renderCell}
-          getStatus={getStatus}
-          onOpenCreateModal={onOpenCreateModal}
-          searchFilter={(deck: Deck, filterValue: string) =>
-            deck.name.toLowerCase().includes(filterValue.toLowerCase())
-          }
-          getItemKey={(deck: Deck) => deck.id}
-        />
-        <UpsertModal
-          isOpen={isOpenCreateModal}
-          onOpenChange={onOpenCreateModalChange}
-          formats={formats}
-          archetypes={archetypes}
-          handleGetAllDecks={handleGetAllDecks}
-          handleGetAllArchetypes={handleGetAllArchetypes}
-          deck={null}
-        />
-        <UpsertModal
-          isOpen={isOpenEditModal}
-          onOpenChange={onOpenEditModalChange}
-          formats={formats}
-          archetypes={archetypes}
-          handleGetAllDecks={handleGetAllDecks}
-          handleGetAllArchetypes={handleGetAllArchetypes}
-          deck={selectedDeck}
-        />
-        <DeleteModal
-          isOpen={isOpenDeleteModal}
-          onOpenChange={onOpenDeleteModalChange}
-          deck={selectedDeck}
-          handleGetAllDecks={handleGetAllDecks}
-        />
-      </>
-    )
+    <div className="w-full max-w-7xl mx-auto px-4">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Decks</h1>
+      </div>
+
+      <FullTable
+        columns={columns}
+        initialVisibleColumns={INITIAL_VISIBLE_COLUMNS}
+        statusOptions={statusOptions}
+        items={decks}
+        loadingItems={loadingDecks}
+        renderCell={renderCell}
+        getStatus={getStatus}
+        onOpenCreateModal={onOpenCreateModal}
+        searchFilter={(deck: Deck, filterValue: string) =>
+          deck.name.toLowerCase().includes(filterValue.toLowerCase())
+        }
+        getItemKey={(deck: Deck) => deck.id}
+      />
+
+      <UpsertModal
+        isOpen={isOpenCreateModal || isOpenEditModal}
+        onOpenChange={
+          isOpenCreateModal ? onOpenCreateModalChange : onOpenEditModalChange
+        }
+        formats={formats}
+        archetypes={archetypes}
+        handleGetAllDecks={handleGetAllDecks}
+        handleGetAllArchetypes={handleGetAllArchetypes}
+        deck={isOpenCreateModal ? null : selectedDeck}
+      />
+      <DeleteModal
+        isOpen={isOpenDeleteModal}
+        onOpenChange={onOpenDeleteModalChange}
+        deck={selectedDeck}
+        handleGetAllDecks={handleGetAllDecks}
+      />
+    </div>
   );
 }

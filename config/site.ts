@@ -12,6 +12,10 @@ export const siteConfig = {
       label: "Decks",
       href: "/decks",
     },
+    {
+      label: "Matches",
+      href: "/matches",
+    },
   ],
   links: {
     docs: "https://heroui.com",

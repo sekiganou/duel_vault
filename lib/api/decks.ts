@@ -13,6 +13,11 @@ export async function getAllDecks(): Promise<Deck[]> {
   return res.data;
 }
 
+export async function getDeckById(id: number): Promise<Deck> {
+  const res = await axios.get(`${basePath}/${id}`);
+  return res.data;
+}
+
 export async function upsertDeck(
   deck: {
     id: number | null;
@@ -23,18 +28,26 @@ export async function upsertDeck(
     active: boolean;
   },
   avatarFile: File | null,
-  currentAvatar: string | null
+  currentAvatar: string | null,
+  nextAvatar: string | null
 ) {
   try {
-    if (currentAvatar) await deleteFile(currentAvatar);
+    const isAvatarToDelete =
+      currentAvatar !== null && avatarFile === null && nextAvatar === null;
 
-    const avatarName = avatarFile ? await uploadFile(avatarFile) : null;
+    if (isAvatarToDelete) await deleteFile(currentAvatar);
+
+    const avatarName = avatarFile
+      ? await uploadFile(avatarFile)
+      : isAvatarToDelete
+        ? null
+        : nextAvatar;
     const validateDeck = UpsertDeckSchema.parse({
       ...deck,
       avatar: avatarName,
     });
 
-    const response = await axios.post(basePath, validateDeck);
+    await axios.post(basePath, validateDeck);
 
     addToast({
       title: `Deck updated successfully!`,
