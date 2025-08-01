@@ -64,8 +64,7 @@ export const Navbar = () => {
                 onClick={() => setSelectedLabel(item.label)}
                 className={clsx(
                   linkStyles({
-                    color:
-                      selectedLabel === item.label ? "primary" : "foreground",
+                    color: "foreground",
                   }),
                   "data-[active=true]:text-primary data-[active=true]:font-medium"
                 )}

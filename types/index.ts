@@ -1,11 +1,32 @@
-import { Archetype, deck, Format } from "@/generated/prisma";
+import { Archetype, deck, Format, Match, Tournament } from "@/generated/prisma";
 import { SVGProps } from "react";
 
 export type IconSvgProps = SVGProps<SVGSVGElement> & {
   size?: number;
 };
 
-export type Deck = deck & { archetype: Archetype; format: Format };
+export type Deck = deck & {
+  archetype: Archetype;
+  format: Format;
+};
+
+export type MatchWithRelations = Match & {
+  tournament: Tournament | null;
+  deckA: deck & {
+    archetype: Archetype;
+    format: Format;
+  };
+  deckB: deck & {
+    archetype: Archetype;
+    format: Format;
+  };
+  winner:
+    | (deck & {
+        archetype: Archetype;
+        format: Format;
+      })
+    | null;
+};
 
 export const FormatDescriptions = {
   SpeedDuel: "Speed Duel",

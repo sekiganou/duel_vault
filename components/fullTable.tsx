@@ -9,7 +9,7 @@ import {
 } from "@heroui/dropdown";
 import { Input } from "@heroui/input";
 import { Pagination } from "@heroui/pagination";
-import { CircularProgress } from "@heroui/progress";
+import { Spinner } from "@heroui/spinner";
 import {
   Table,
   TableBody,
@@ -35,6 +35,10 @@ interface FullTableProps<T> {
   getStatus: (item: T) => string;
   getItemKey: (item: T) => number;
 }
+
+export const capitalize = (s: string) =>
+  s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : "";
+
 export const FullTable = <T,>(props: FullTableProps<T>) => {
   const {
     columns,
@@ -58,9 +62,6 @@ export const FullTable = <T,>(props: FullTableProps<T>) => {
   const [visibleColumns, setVisibleColumns] = useState<Selection>(
     new Set(initialVisibleColumns)
   );
-
-  const capitalize = (s: string) =>
-    s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : "";
 
   const headerColumns = useMemo(() => {
     if (visibleColumns === "all") return columns;
@@ -324,7 +325,7 @@ export const FullTable = <T,>(props: FullTableProps<T>) => {
           emptyContent={"No items found"}
           items={sortedItems}
           isLoading={loadingItems}
-          loadingContent={<CircularProgress />}
+          loadingContent={<Spinner />}
         >
           {(item) => (
             <TableRow key={getItemKey(item)}>
