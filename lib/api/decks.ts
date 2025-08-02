@@ -7,6 +7,7 @@ import { addToast } from "@heroui/toast";
 import { deleteFile, uploadFile } from "./minio";
 import { ChipProps } from "@heroui/chip";
 import { Button } from "@heroui/button";
+import { getAvatarUrl } from "./avatarCache";
 
 const basePath = "/api/decks";
 
@@ -21,12 +22,36 @@ export function getDeckStatus(deck: DeckWithRelations): string {
 
 export async function getAllDecks(): Promise<DeckWithRelations[]> {
   const res = await axios.get(basePath);
-  return res.data;
+  const decks: DeckWithRelations[] = res.data;
+
+  // Replace avatar paths with cached presigned URLs
+  await Promise.all(
+    decks.map(async (deck) => {
+      if (deck.avatar) {
+        const presignedUrl = await getAvatarUrl(deck.avatar);
+        if (presignedUrl) {
+          deck.avatar = presignedUrl;
+        }
+      }
+    })
+  );
+
+  return decks;
 }
 
 export async function getDeckById(id: number): Promise<DeckWithRelations> {
   const res = await axios.get(`${basePath}/${id}`);
-  return res.data;
+  const deck: DeckWithRelations = res.data;
+
+  // Replace avatar path with cached presigned URL
+  if (deck.avatar) {
+    const presignedUrl = await getAvatarUrl(deck.avatar);
+    if (presignedUrl) {
+      deck.avatar = presignedUrl;
+    }
+  }
+
+  return deck;
 }
 
 export async function upsertDeck(

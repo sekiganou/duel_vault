@@ -375,16 +375,7 @@ export default function MatchesPage() {
       setDecks(decks);
 
       const matches = await getAllMatches();
-      const matchesWithAvatars = matches.map((match) => {
-        const deckA = decks.find((deck) => deck.id === match.deckAId);
-        const deckB = decks.find((deck) => deck.id === match.deckBId);
-        return {
-          ...match,
-          deckA: { ...match.deckA, avatar: deckA?.avatar ?? "" },
-          deckB: { ...match.deckB, avatar: deckB?.avatar ?? "" },
-        };
-      });
-      setMatches(matchesWithAvatars);
+      setMatches(matches);
 
       const tournaments = await getAllTournaments();
       setTournaments(tournaments);
@@ -427,7 +418,13 @@ export default function MatchesPage() {
         case "result":
           return (
             <Chip
-              color={match.winner ? "success" : "warning"}
+              color={
+                match.winner
+                  ? match.winner.id === match.deckA.id
+                    ? "success"
+                    : "danger"
+                  : "warning"
+              }
               variant="flat"
               size="sm"
             >

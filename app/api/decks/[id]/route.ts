@@ -34,18 +34,9 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     return NextResponse.json({ error: "Deck not found" }, { status: 404 });
   }
 
-  // Get presigned URL for avatar if it exists
-  const minio = getMinioClient();
-  const bucketExists = await minio.bucketExists(S3_BUCKET);
-
-  if (bucketExists && deck.avatar) {
-    deck.avatar = await minio.presignedGetObject(
-      S3_BUCKET,
-      deck.avatar,
-      60 * 60 * 24
-    );
-  }
-
+  // Note: Avatar URL should be managed through the avatar-cache API
+  // This endpoint now returns the avatar path, and the client should
+  // use the avatar cache to get presigned URLs
   return NextResponse.json(deck);
 });
 

@@ -1,6 +1,7 @@
 import axios from "axios";
 import { TournamentWithRelations } from "@/types";
 import { addToast } from "@heroui/toast";
+import { getAvatarUrl } from "./avatarCache";
 
 const basePath = "/api/tournaments";
 
@@ -13,6 +14,21 @@ export async function getTournamentById(
   id: number
 ): Promise<TournamentWithRelations> {
   const res = await axios.get(`${basePath}/${id}`);
+  const tournament: TournamentWithRelations = res.data;
+  tournament.matches.map(async (match) => {
+    if (match.deckA.avatar) {
+      const presignedUrl = await getAvatarUrl(match.deckA.avatar);
+      if (presignedUrl) {
+        match.deckA.avatar = presignedUrl;
+      }
+    }
+    if (match.deckB.avatar) {
+      const presignedUrl = await getAvatarUrl(match.deckB.avatar);
+      if (presignedUrl) {
+        match.deckB.avatar = presignedUrl;
+      }
+    }
+  });
   return res.data;
 }
 

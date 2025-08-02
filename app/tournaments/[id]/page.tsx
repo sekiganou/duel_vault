@@ -407,6 +407,7 @@ export default function ViewTournamentPage() {
                             avatarProps={{
                               src: match.deckA.avatar || undefined,
                               size: "sm",
+                              radius: "lg",
                             }}
                           />
                         </TableCell>
@@ -417,6 +418,7 @@ export default function ViewTournamentPage() {
                             avatarProps={{
                               src: match.deckB.avatar || undefined,
                               size: "sm",
+                              radius: "lg",
                             }}
                           />
                         </TableCell>
@@ -427,9 +429,15 @@ export default function ViewTournamentPage() {
                         </TableCell>
                         <TableCell>
                           {match.winner ? (
-                            <span className="text-success font-semibold">
-                              {match.winner.name}
-                            </span>
+                            match.winner.id === match.deckA.id ? (
+                              <span className="text-success font-semibold">
+                                {match.deckA.name}
+                              </span>
+                            ) : (
+                              <span className="text-danger font-semibold">
+                                {match.deckB.name}
+                              </span>
+                            )
                           ) : (
                             <span className="text-warning font-semibold">
                               Tie
