@@ -6,6 +6,7 @@ import {
   getAllDecks,
   deleteDeck,
   getDeckStatus,
+  statusColorMap,
 } from "@/lib/api/decks";
 import { Deck, StatusOptionDescriptor, TableColumnDescriptor } from "@/types";
 import { User } from "@heroui/user";
@@ -69,11 +70,6 @@ const statusOptions: StatusOptionDescriptor[] = [
 
 const extractFileName = (avatar: string): string =>
   avatar.substring(avatar.lastIndexOf("/") + 1).split("?")[0];
-
-export const statusColorMap: Record<string, ChipProps["color"]> = {
-  active: "success",
-  inactive: "default",
-};
 
 const DeleteModal = ({
   isOpen,

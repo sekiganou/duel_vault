@@ -5,10 +5,16 @@ import { Deck } from "@/types";
 import { getMinioClient } from "@/s3";
 import { addToast } from "@heroui/toast";
 import { deleteFile, uploadFile } from "./minio";
+import { ChipProps } from "@heroui/chip";
 
 const basePath = "/api/decks";
 
-export function getDeckStatus (deck: Deck): string {
+export const statusColorMap: Record<string, ChipProps["color"]> = {
+  active: "success",
+  inactive: "default",
+};
+
+export function getDeckStatus(deck: Deck): string {
   return deck.active ? "active" : "inactive";
 }
 

@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getDeckById, getDeckStatus } from "@/lib/api/decks";
+import { getDeckById, getDeckStatus, statusColorMap } from "@/lib/api/decks";
 import { Deck } from "@/types";
 import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Chip } from "@heroui/chip";
@@ -12,7 +12,6 @@ import { Divider } from "@heroui/divider";
 import { Image } from "@heroui/image";
 import { IconChevronLeft, IconRefresh } from "@tabler/icons-react";
 import { Button } from "@heroui/button";
-import { statusColorMap } from "../page";
 import { capitalize } from "@/components/fullTable";
 
 export default function ViewDeckPage() {

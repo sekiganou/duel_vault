@@ -66,7 +66,7 @@ const statusOptions: StatusOptionDescriptor[] = [
   { name: "Friendly Matches", uid: "friendly" },
 ];
 
-export const statusColorMap: Record<string, ChipProps["color"]> = {
+const statusColorMap: Record<string, ChipProps["color"]> = {
   tournament: "primary",
   friendly: "secondary",
 };
