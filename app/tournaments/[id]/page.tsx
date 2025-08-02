@@ -57,9 +57,7 @@ export default function ViewTournamentPage() {
     setLoading(true);
     setError(null);
     getTournamentById(Number(id))
-      .then((tournaments) => {
-        
-      })
+      .then(setTournament)
       .catch((err) => {
         setError(err.message || "Failed to load tournament");
       })
