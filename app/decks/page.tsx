@@ -45,7 +45,6 @@ import { Avatar } from "@heroui/avatar";
 import { addToast } from "@heroui/toast";
 import { useRouter } from "next/navigation";
 import { Tooltip } from "@heroui/tooltip";
-import { avatarCacheAPI } from "@/lib/api/avatarCacheAPI";
 
 const columns: TableColumnDescriptor[] = [
   { name: "ID", uid: "id", sortable: true },
@@ -425,10 +424,7 @@ export default function DecksPage() {
 
   const handleGetAllDecks = () =>
     getAllDecks()
-      .then(async (decks) => {
-        // const processedDecks = await avatarCacheAPI.processDecksAvatars(decks);
-        setDecks(decks);
-      })
+      .then(setDecks)
       .finally(() => {
         setLoadingDecks(false);
       });
