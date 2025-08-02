@@ -34,17 +34,25 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     return NextResponse.json({ error: "Deck not found" }, { status: 404 });
   }
 
-  // Get presigned URL for avatar if it exists
-  const minio = getMinioClient();
-  const bucketExists = await minio.bucketExists(S3_BUCKET);
+  // // Get presigned URL for avatar if it exists
+  // const minio = getMinioClient();
+  // const bucketExists = await minio.bucketExists(S3_BUCKET);
 
-  if (bucketExists && deck.avatar) {
-    deck.avatar = await minio.presignedGetObject(
-      S3_BUCKET,
-      deck.avatar,
-      60 * 60 * 24
-    );
-  }
+  // if (bucketExists && deck.avatar) {
+  //   try {
+  //     deck.avatar = await minio.presignedGetObject(
+  //       S3_BUCKET,
+  //       deck.avatar,
+  //       60 * 60 * 24
+  //     );
+  //   } catch (error) {
+  //     console.warn(
+  //       `Failed to generate presigned URL for avatar ${deck.avatar}:`,
+  //       error
+  //     );
+  //     // Keep original avatar filename if presigned URL generation fails
+  //   }
+  // }
 
   return NextResponse.json(deck);
 });
