@@ -1,7 +1,12 @@
 "use client";
 
 import { Tournament } from "@/generated/prisma";
-import { upsertMatch, getAllMatches, deleteMatch } from "@/lib/api/matches";
+import {
+  upsertMatch,
+  getAllMatches,
+  deleteMatch,
+  getMatchStatus,
+} from "@/lib/api/matches";
 import { getAllDecks } from "@/lib/api/decks";
 import {
   Deck,
@@ -60,9 +65,6 @@ const statusOptions: StatusOptionDescriptor[] = [
   { name: "Tournament Matches", uid: "tournament" },
   { name: "Friendly Matches", uid: "friendly" },
 ];
-
-export const getStatus = (match: MatchWithRelations) =>
-  match.tournament ? "tournament" : "friendly";
 
 export const statusColorMap: Record<string, ChipProps["color"]> = {
   tournament: "primary",
@@ -445,7 +447,7 @@ export default function MatchesPage() {
         case "tournament":
           return (
             <Chip
-              color={statusColorMap[getStatus(match)]}
+              color={statusColorMap[getMatchStatus(match)]}
               variant="flat"
               size={"sm"}
             >
@@ -528,7 +530,7 @@ export default function MatchesPage() {
           setSelectedMatch(null);
           onOpenCreateModal();
         }}
-        getStatus={getStatus}
+        getStatus={getMatchStatus}
         getItemKey={(match) => match.id}
       />
 

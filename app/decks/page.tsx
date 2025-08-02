@@ -5,6 +5,7 @@ import {
   upsertDeck as upsertDeck,
   getAllDecks,
   deleteDeck,
+  getDeckStatus,
 } from "@/lib/api/decks";
 import { Deck, StatusOptionDescriptor, TableColumnDescriptor } from "@/types";
 import { User } from "@heroui/user";
@@ -65,8 +66,6 @@ const statusOptions: StatusOptionDescriptor[] = [
   { name: "Active", uid: "active" },
   { name: "Inactive", uid: "inactive" },
 ];
-
-export const getStatus = (deck: Deck) => (deck.active ? "active" : "inactive");
 
 const extractFileName = (avatar: string): string =>
   avatar.substring(avatar.lastIndexOf("/") + 1).split("?")[0];
@@ -472,10 +471,10 @@ export default function DecksPage() {
             <Chip
               className="capitalize"
               variant="flat"
-              color={statusColorMap[getStatus(deck)]}
+              color={statusColorMap[getDeckStatus(deck)]}
               size="sm"
             >
-              {getStatus(deck)}
+              {getDeckStatus(deck)}
             </Chip>
           );
         case "actions":
@@ -538,7 +537,7 @@ export default function DecksPage() {
         items={decks}
         loadingItems={loadingDecks}
         renderCell={renderCell}
-        getStatus={getStatus}
+        getStatus={getDeckStatus}
         onOpenCreateModal={onOpenCreateModal}
         searchFilter={(deck: Deck, filterValue: string) =>
           deck.name.toLowerCase().includes(filterValue.toLowerCase())

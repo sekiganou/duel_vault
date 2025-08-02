@@ -8,6 +8,10 @@ import { deleteFile, uploadFile } from "./minio";
 
 const basePath = "/api/decks";
 
+export function getDeckStatus (deck: Deck): string {
+  return deck.active ? "active" : "inactive";
+}
+
 export async function getAllDecks(): Promise<Deck[]> {
   const res = await axios.get(basePath);
   return res.data;

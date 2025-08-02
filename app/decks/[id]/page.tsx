@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getDeckById } from "@/lib/api/decks";
+import { getDeckById, getDeckStatus } from "@/lib/api/decks";
 import { Deck } from "@/types";
 import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Chip } from "@heroui/chip";
@@ -12,7 +12,7 @@ import { Divider } from "@heroui/divider";
 import { Image } from "@heroui/image";
 import { IconChevronLeft, IconRefresh } from "@tabler/icons-react";
 import { Button } from "@heroui/button";
-import { getStatus, statusColorMap } from "../page";
+import { statusColorMap } from "../page";
 import { capitalize } from "@/components/fullTable";
 
 export default function ViewDeckPage() {
@@ -134,8 +134,11 @@ export default function ViewDeckPage() {
                 <Chip color="secondary" variant="flat">
                   {deck.archetype.name}
                 </Chip>
-                <Chip color={statusColorMap[getStatus(deck)]} variant="flat">
-                  {capitalize(getStatus(deck))}
+                <Chip
+                  color={statusColorMap[getDeckStatus(deck)]}
+                  variant="flat"
+                >
+                  {capitalize(getDeckStatus(deck))}
                 </Chip>
               </div>
             </div>

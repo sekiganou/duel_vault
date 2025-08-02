@@ -6,6 +6,10 @@ import { MatchWithRelations } from "@/types";
 
 const basePath = "/api/matches";
 
+export function getMatchStatus(match: MatchWithRelations): string {
+  return match.tournament ? "tournament" : "friendly";
+}
+
 export async function getAllMatches(): Promise<MatchWithRelations[]> {
   const res = await axios.get(basePath);
   return res.data;
