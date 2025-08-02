@@ -149,8 +149,8 @@ export default function Home() {
 
         <Card className="p-4">
           <CardBody className="flex flex-row items-center gap-4">
-            <div className="p-3 rounded-lg bg-secondary-100">
-              <IconSwords className="text-secondary" size={24} />
+            <div className="p-3 rounded-lg bg-secondary-200">
+              <IconSwords className="text-secondary-700" size={24} />
             </div>
             <div>
               <p className="text-2xl font-bold">{totalMatches}</p>
@@ -293,7 +293,7 @@ export default function Home() {
                     key={deck.id}
                     onPress={() => router.push(`/decks/${deck.id}`)}
                     className="flex items-center justify-between p-3"
-                    radius="lg"
+                    // radius="md"
                     variant="light"
                   >
                     <User

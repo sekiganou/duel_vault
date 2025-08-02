@@ -35,6 +35,7 @@ export default function RootLayout({
   return (
     <html suppressHydrationWarning lang="en">
       <head />
+      <meta name="apple-mobile-web-app-title" content="Duel Vault" />
       <body
         className={clsx(
           "min-h-screen text-foreground bg-background font-sans antialiased",
@@ -51,11 +52,11 @@ export default function RootLayout({
               <Link
                 isExternal
                 className="flex items-center gap-1 text-current"
-                href="https://heroui.com?utm_source=next-app-template"
-                title="heroui.com homepage"
+                href="https://github.com/sekiganou"
+                title="sekiganou's GitHub"
               >
-                <span className="text-default-600">Powered by</span>
-                <p className="text-primary">HeroUI</p>
+                <span className="text-default-600">Made by</span>
+                <p className="text-primary">sekiganou</p>
               </Link>
             </footer>
           </div>

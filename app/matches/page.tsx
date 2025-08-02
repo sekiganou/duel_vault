@@ -216,7 +216,7 @@ const UpsertModal = ({
               {isEdit ? "Edit Match" : "Create New Match"}
             </ModalHeader>
             <ModalBody>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ">
                 <Select
                   label="Tournament (Optional)"
                   placeholder="Select a tournament"
