@@ -55,17 +55,3 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   return NextResponse.json({ success: true, item: item });
 });
 
-export const DELETE = withErrorHandler(async (req: NextRequest) => {
-  const { searchParams } = new URL(req.url);
-  const id = parseInt(searchParams.get("id") || "");
-
-  if (isNaN(id)) {
-    return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
-  }
-
-  await schema.delete({
-    where: { id: id },
-  });
-
-  return NextResponse.json({ success: true, deletedId: id });
-});

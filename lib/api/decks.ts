@@ -1,11 +1,12 @@
 import axios from "axios";
-import { z } from "zod";
+import { size, z } from "zod";
 import { UpsertDeckSchema } from "../schemas/decks";
 import { Deck } from "@/types";
 import { getMinioClient } from "@/s3";
 import { addToast } from "@heroui/toast";
 import { deleteFile, uploadFile } from "./minio";
 import { ChipProps } from "@heroui/chip";
+import { Button } from "@heroui/button";
 
 const basePath = "/api/decks";
 
@@ -71,6 +72,7 @@ export async function upsertDeck(
     }
     addToast({
       title: `Failed to update deck. Please try again`,
+      description: "Ensure all fields are filled out correctly.",
       color: "danger",
     });
   }
@@ -78,9 +80,9 @@ export async function upsertDeck(
 
 export async function deleteDeck(id: number, avatar: string | null) {
   try {
-    if (avatar) await deleteFile(avatar);
-
-    await axios.delete(`${basePath}?id=${id}`);
+    await axios.delete(`${basePath}/${id}`).then(() => {
+      if (avatar) deleteFile(avatar);
+    });
 
     addToast({
       title: `Deck deleted successfully!`,
@@ -90,6 +92,7 @@ export async function deleteDeck(id: number, avatar: string | null) {
     console.error("Error deleting deck:", error);
     addToast({
       title: `Failed to delete deck. Please try again`,
+      description: "This deck may be associated with matches or tournaments.",
       color: "danger",
     });
     return;

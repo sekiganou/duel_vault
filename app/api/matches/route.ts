@@ -106,8 +106,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       return { deckA: "tie", deckB: "tie" } as const;
     };
 
-    const resultsBefore =
-      winnerIdBefore !== null ? getMatchResults(winnerIdBefore) : null;
+    const resultsBefore = getMatchResults(winnerIdBefore);
     const resultsAfter = getMatchResults(winnerIdAfter);
 
     // Helper to calculate stat changes
