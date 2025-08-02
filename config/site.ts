@@ -16,8 +16,9 @@ export const siteConfig = {
       label: "Matches",
       href: "/matches",
     },
+    {
+      label: "Tournaments",
+      href: "/tournaments",
+    },
   ],
-  links: {
-    docs: "https://heroui.com",
-  },
 };

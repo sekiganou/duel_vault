@@ -9,7 +9,7 @@ import {
 } from "@/lib/api/matches";
 import { getAllDecks } from "@/lib/api/decks";
 import {
-  Deck,
+  DeckWithRelations,
   MatchWithRelations,
   StatusOptionDescriptor,
   TableColumnDescriptor,
@@ -39,6 +39,7 @@ import { FullTable } from "@/components/fullTable";
 import { addToast } from "@heroui/toast";
 import { Input } from "@heroui/input";
 import { User } from "@heroui/user";
+import { getAllTournaments } from "@/lib/api/tournaments";
 
 const columns: TableColumnDescriptor[] = [
   { name: "ID", uid: "id", sortable: true },
@@ -139,7 +140,7 @@ const UpsertModal = ({
 }: {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  decks: Deck[];
+  decks: DeckWithRelations[];
   tournaments: Tournament[];
   handleGetAllMatches: () => Promise<void>;
   match: MatchWithRelations | null;
@@ -155,7 +156,8 @@ const UpsertModal = ({
   const [date, setDate] = useState("");
   const [loadingCreateMatch, setLoadingCreateMatch] = useState(false);
 
-  const getDeckName = (deck: Deck) => `${deck.name} (${deck.archetype.name})`;
+  const getDeckName = (deck: DeckWithRelations) =>
+    `${deck.name} (${deck.archetype.name})`;
 
   useEffect(() => {
     handleReset();
@@ -344,7 +346,7 @@ const UpsertModal = ({
 
 export default function MatchesPage() {
   const [matches, setMatches] = useState<MatchWithRelations[]>([]);
-  const [decks, setDecks] = useState<Deck[]>([]);
+  const [decks, setDecks] = useState<DeckWithRelations[]>([]);
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loadingMatches, setLoadingMatches] = useState(true);
   const [selectedMatch, setSelectedMatch] = useState<MatchWithRelations | null>(
@@ -384,8 +386,8 @@ export default function MatchesPage() {
       });
       setMatches(matchesWithAvatars);
 
-      // TODO: Add tournaments API when available
-      setTournaments([]);
+      const tournaments = await getAllTournaments();
+      setTournaments(tournaments);
     } finally {
       setLoadingMatches(false);
     }

@@ -3,7 +3,7 @@
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getDeckById, getDeckStatus, statusColorMap } from "@/lib/api/decks";
-import { Deck } from "@/types";
+import { DeckWithRelations } from "@/types";
 import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Chip } from "@heroui/chip";
 import { Avatar } from "@heroui/avatar";
@@ -16,7 +16,7 @@ import { capitalize } from "@/components/fullTable";
 
 export default function ViewDeckPage() {
   const { id } = useParams();
-  const [deck, setDeck] = useState<Deck | null>(null);
+  const [deck, setDeck] = useState<DeckWithRelations | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

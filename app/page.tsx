@@ -8,7 +8,11 @@ import { Button } from "@heroui/button";
 import { useEffect, useState } from "react";
 import { getAllDecks } from "@/lib/api/decks";
 import { getAllMatches } from "@/lib/api/matches";
-import { Deck, MatchWithRelations } from "@/types";
+import {
+  DeckWithRelations,
+  MatchWithRelations,
+  TournamentWithRelations,
+} from "@/types";
 import {
   IconTrophy,
   IconCards,
@@ -20,22 +24,26 @@ import {
 import { useRouter } from "next/navigation";
 import { Spinner } from "@heroui/spinner";
 import { Skeleton } from "@heroui/skeleton";
+import { getAllTournaments } from "@/lib/api/tournaments";
 
 export default function Home() {
-  const [decks, setDecks] = useState<Deck[]>([]);
+  const [decks, setDecks] = useState<DeckWithRelations[]>([]);
   const [matches, setMatches] = useState<MatchWithRelations[]>([]);
+  const [tournaments, setTournaments] = useState<TournamentWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [decksData, matchesData] = await Promise.all([
+        const [decksData, matchesData, tournamentsData] = await Promise.all([
           getAllDecks(),
           getAllMatches(),
+          getAllTournaments(),
         ]);
         setDecks(decksData);
         setMatches(matchesData);
+        setTournaments(tournamentsData);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
       } finally {
@@ -50,6 +58,7 @@ export default function Home() {
   const totalDecks = decks.length;
   const activeDecks = decks.filter((deck) => deck.active).length;
   const totalMatches = matches.length;
+  const totalTournaments = tournaments.length;
   const recentMatches = matches.slice(0, 5);
 
   const totalWins = decks.reduce((sum, deck) => sum + deck.wins, 0);
@@ -83,7 +92,10 @@ export default function Home() {
     });
   };
 
-  const getMatchResult = (match: MatchWithRelations, deck: Deck) => {
+  const getMatchResult = (
+    match: MatchWithRelations,
+    deck: DeckWithRelations
+  ) => {
     if (!match.winnerId) return "tie";
     if (match.winnerId === deck.id) return "win";
     return "loss";
@@ -149,8 +161,8 @@ export default function Home() {
 
         <Card className="p-4">
           <CardBody className="flex flex-row items-center gap-4">
-            <div className="p-3 rounded-lg bg-secondary-200">
-              <IconSwords className="text-secondary-700" size={24} />
+            <div className="p-3 rounded-lg bg-secondary-100">
+              <IconSwords className="text-secondary" size={24} />
             </div>
             <div>
               <p className="text-2xl font-bold">{totalMatches}</p>
@@ -172,7 +184,7 @@ export default function Home() {
               </p>
             </div> */}
             <div>
-              <p className="text-2xl font-bold">{0}</p>
+              <p className="text-2xl font-bold">{totalTournaments}</p>
               <p className="text-small text-default-500">Total Tournaments</p>
             </div>
           </CardBody>

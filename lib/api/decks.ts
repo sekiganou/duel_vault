@@ -1,8 +1,8 @@
 import axios from "axios";
 import { size, z } from "zod";
 import { UpsertDeckSchema } from "../schemas/decks";
-import { Deck } from "@/types";
-import { getMinioClient } from "@/s3";
+import { DeckWithRelations } from "@/types";
+import { getMinioClient, S3_BUCKET } from "@/s3";
 import { addToast } from "@heroui/toast";
 import { deleteFile, uploadFile } from "./minio";
 import { ChipProps } from "@heroui/chip";
@@ -15,16 +15,16 @@ export const statusColorMap: Record<string, ChipProps["color"]> = {
   inactive: "default",
 };
 
-export function getDeckStatus(deck: Deck): string {
+export function getDeckStatus(deck: DeckWithRelations): string {
   return deck.active ? "active" : "inactive";
 }
 
-export async function getAllDecks(): Promise<Deck[]> {
+export async function getAllDecks(): Promise<DeckWithRelations[]> {
   const res = await axios.get(basePath);
   return res.data;
 }
 
-export async function getDeckById(id: number): Promise<Deck> {
+export async function getDeckById(id: number): Promise<DeckWithRelations> {
   const res = await axios.get(`${basePath}/${id}`);
   return res.data;
 }
@@ -72,7 +72,6 @@ export async function upsertDeck(
     }
     addToast({
       title: `Failed to update deck. Please try again`,
-      description: "Ensure all fields are filled out correctly.",
       color: "danger",
     });
   }

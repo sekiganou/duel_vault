@@ -54,4 +54,3 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
   return NextResponse.json({ success: true, item: item });
 });
-

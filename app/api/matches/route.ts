@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { withErrorHandler } from "@/lib/middlewares/withErrorHandler";
 import { UpsertMatchSchema } from "@/lib/schemas/matches";
-import { Deck } from "@/types";
+import { DeckWithRelations } from "@/types";
 import { NextRequest, NextResponse } from "next/server";
 import z from "zod";
 

@@ -1,27 +1,34 @@
-import { Archetype, deck, Format, Match, Tournament } from "@/generated/prisma";
+import {
+  Archetype,
+  Deck,
+  Format,
+  Match,
+  Tournament,
+  TournamentDeckStats,
+} from "@/generated/prisma";
 import { SVGProps } from "react";
 
 export type IconSvgProps = SVGProps<SVGSVGElement> & {
   size?: number;
 };
 
-export type Deck = deck & {
+export type DeckWithRelations = Deck & {
   archetype: Archetype;
   format: Format;
 };
 
 export type MatchWithRelations = Match & {
   tournament: Tournament | null;
-  deckA: deck & {
+  deckA: Deck & {
     archetype: Archetype;
     format: Format;
   };
-  deckB: deck & {
+  deckB: Deck & {
     archetype: Archetype;
     format: Format;
   };
   winner:
-    | (deck & {
+    | (Deck & {
         archetype: Archetype;
         format: Format;
       })
@@ -43,4 +50,16 @@ export type TableColumnDescriptor = {
 export type StatusOptionDescriptor = {
   name: string;
   uid: string;
+};
+
+export type TournamentWithRelations = Tournament & {
+  format: Format;
+  matches: (Match & {
+    deckA: DeckWithRelations;
+    deckB: DeckWithRelations;
+    winner: DeckWithRelations | null;
+  })[];
+  deckStats: (TournamentDeckStats & {
+    deck: DeckWithRelations;
+  })[];
 };
