@@ -19,8 +19,40 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     include: {
       archetype: true,
       format: true,
-      matchesA: true,
-      matchesB: true,
+      matchesA: {
+        include: {
+          deckA: {
+            include: {
+              archetype: true,
+              format: true,
+            },
+          },
+          deckB: {
+            include: {
+              archetype: true,
+              format: true,
+            },
+          },
+          tournament: true,
+        },
+      },
+      matchesB: {
+        include: {
+          deckA: {
+            include: {
+              archetype: true,
+              format: true,
+            },
+          },
+          deckB: {
+            include: {
+              archetype: true,
+              format: true,
+            },
+          },
+          tournament: true,
+        },
+      },
       winsAs: true,
       tournamentStats: {
         include: {

@@ -51,6 +51,20 @@ export async function getDeckById(id: number): Promise<DeckWithRelations> {
     }
   }
 
+  deck.matchesA.forEach(async (match) => {
+    if (deck.id !== match.deckAId && match.deckA.avatar)
+      match.deckA.avatar = await getAvatarUrl(match.deckA.avatar);
+    if (deck.id !== match.deckBId && match.deckB.avatar)
+      match.deckB.avatar = await getAvatarUrl(match.deckB.avatar);
+  });
+
+  deck.matchesB.forEach(async (match) => {
+    if (deck.id !== match.deckAId && match.deckA.avatar)
+      match.deckA.avatar = await getAvatarUrl(match.deckA.avatar);
+    if (deck.id !== match.deckBId && match.deckB.avatar)
+      match.deckB.avatar = await getAvatarUrl(match.deckB.avatar);
+  });
+
   return deck;
 }
 

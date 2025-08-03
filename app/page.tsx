@@ -19,7 +19,6 @@ import {
   IconSwords,
   IconCalendar,
   IconTrendingUp,
-  IconEye,
 } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { Spinner } from "@heroui/spinner";
@@ -301,12 +300,9 @@ export default function Home() {
                   (deck.wins / (deck.wins + deck.losses + deck.ties)) * 100
                 );
                 return (
-                  <Button
+                  <div
                     key={deck.id}
-                    onPress={() => router.push(`/decks/${deck.id}`)}
-                    className="flex items-center justify-between p-3"
-                    // radius="md"
-                    variant="light"
+                    className="flex items-center justify-between p-3 rounded-lg bg-default-50"
                   >
                     <User
                       avatarProps={{
@@ -322,7 +318,7 @@ export default function Home() {
                         description: "text-tiny",
                       }}
                     />
-                    <div className="text-right">
+                    <div className="text-right ml-auto">
                       <p className="text-small font-bold text-success">
                         {deckWinRate}%
                       </p>
@@ -330,7 +326,15 @@ export default function Home() {
                         {deck.wins}W {deck.losses}L {deck.ties}T
                       </p>
                     </div>
-                  </Button>
+                    <Button
+                      onPress={() => router.push(`/decks/${deck.id}`)}
+                      variant="light"
+                      size="sm"
+                      className="ml-3"
+                    >
+                      View
+                    </Button>
+                  </div>
                 );
               })}
             {decks.filter((deck) => deck.wins + deck.losses + deck.ties > 0)
@@ -343,42 +347,82 @@ export default function Home() {
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      {/* <Card>
-        <CardHeader>
-          <h3 className="text-lg font-semibold">Quick Actions</h3>
-        </CardHeader>
-        <CardBody>
-          <div className="flex flex-wrap gap-3">
-            <Button
-              color="primary"
-              variant="flat"
-              startContent={<IconCards size={18} />}
-              onPress={() => router.push("/decks")}
-            >
-              Manage Decks
-            </Button>
-            <Button
-              color="secondary"
-              variant="flat"
-              startContent={<IconSwords size={18} />}
-              onPress={() => router.push("/matches")}
-            >
-              Record Match
-            </Button>
-            {topDeck && (
-              <Button
-                color="success"
-                variant="flat"
-                startContent={<IconEye size={18} />}
-                onPress={() => router.push(`/decks/${topDeck.id}`)}
-              >
-                View Top Deck
-              </Button>
-            )}
+      {/* Tournaments */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div className="flex items-center gap-2">
+            <IconCalendar size={20} />
+            <h3 className="text-lg font-semibold">Recent Tournaments</h3>
           </div>
+          <Button
+            size="sm"
+            variant="light"
+            onPress={() => router.push("/tournaments")}
+          >
+            View All
+          </Button>
+        </CardHeader>
+        <CardBody className="gap-3">
+          {tournaments.length > 0 ? (
+            tournaments
+              .sort((a, b) => {
+                return (
+                  new Date(b.startDate).getTime() -
+                  new Date(a.startDate).getTime()
+                );
+              })
+              .slice(0, 5)
+              .map((tournament) => (
+                <div
+                  key={tournament.id}
+                  className="flex items-center justify-between p-3 rounded-lg bg-default-50"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="text-small">
+                      <p className="font-medium">{tournament.name}</p>
+                      <p className="text-tiny text-default-400">
+                        {formatDate(tournament.startDate)} -{" "}
+                        {formatDate(tournament.endDate ?? "Ongoing")}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Chip size="sm" variant="flat" color="primary">
+                      {tournament.deckStats.length} Participants
+                    </Chip>
+                    <Chip size="sm" variant="flat" color="secondary">
+                      {tournament.format.name}
+                    </Chip>
+                    <Chip size="sm" variant="flat" color="default">
+                      {tournament.matches.length} Matches
+                    </Chip>
+                    <Button
+                      size="sm"
+                      variant="light"
+                      onPress={() =>
+                        router.push(`/tournaments/${tournament.id}`)
+                      }
+                      target="_blank"
+                    >
+                      View
+                    </Button>
+                    {/* <Button
+                      size="sm"
+                      variant="light"
+                      onPress={() => router.push(tournament.link || "#")}
+                    >
+                      View External
+                    </Button> */}
+                  </div>
+                </div>
+              ))
+          ) : (
+            <p className="text-default-400 text-center py-4">
+              No tournaments yet
+            </p>
+          )}
         </CardBody>
-      </Card> */}
+      </Card>
     </section>
   );
 }

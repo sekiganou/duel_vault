@@ -15,6 +15,32 @@ export type IconSvgProps = SVGProps<SVGSVGElement> & {
 export type DeckWithRelations = Deck & {
   archetype: Archetype;
   format: Format;
+  matchesA: (Match & {
+    deckA: Deck & {
+      archetype: Archetype;
+      format: Format;
+    };
+    deckB: Deck & {
+      archetype: Archetype;
+      format: Format;
+    };
+    tournament: Tournament | null;
+  })[];
+  matchesB: (Match & {
+    deckA: Deck & {
+      archetype: Archetype;
+      format: Format;
+    };
+    deckB: Deck & {
+      archetype: Archetype;
+      format: Format;
+    };
+    tournament: Tournament | null;
+  })[];
+  winsAs: Match[];
+  tournamentStats: (TournamentDeckStats & {
+    tournament: Tournament | null;
+  })[];
 };
 
 export type MatchWithRelations = Match & {

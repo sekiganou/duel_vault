@@ -13,6 +13,15 @@ import { Image } from "@heroui/image";
 import { IconChevronLeft, IconRefresh } from "@tabler/icons-react";
 import { Button } from "@heroui/button";
 import { capitalize } from "@/components/fullTable";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableColumn,
+  TableHeader,
+  TableRow,
+} from "@heroui/table";
+import { User } from "@heroui/user";
 
 export default function ViewDeckPage() {
   const { id } = useParams();
@@ -26,6 +35,8 @@ export default function ViewDeckPage() {
       .then(setDeck)
       .finally(() => setLoading(false));
   }, [id]);
+
+  console.log("Deck data:", deck);
 
   useEffect(() => {
     if (deck) {
@@ -92,6 +103,45 @@ export default function ViewDeckPage() {
   const totalMatches = deck.wins + deck.losses + deck.ties;
   const winRate =
     totalMatches > 0 ? ((deck.wins / totalMatches) * 100).toFixed(1) : "0";
+
+  // Calculate matchup statistics
+  const allMatches = [...deck.matchesA, ...deck.matchesB];
+  const matchupStats = new Map<
+    string,
+    {
+      wins: number;
+      losses: number;
+      ties: number;
+      avatar: string | null;
+      deckName: string;
+      archetypeName: string;
+    }
+  >();
+
+  allMatches.forEach((match) => {
+    const opponentDeck = match.deckA.id === deck.id ? match.deckB : match.deckA;
+    const key = `${opponentDeck.archetype.name}-${opponentDeck.id}`;
+
+    if (!matchupStats.has(key)) {
+      matchupStats.set(key, {
+        wins: 0,
+        losses: 0,
+        ties: 0,
+        avatar: opponentDeck.avatar,
+        deckName: opponentDeck.name,
+        archetypeName: opponentDeck.archetype.name,
+      });
+    }
+
+    const stats = matchupStats.get(key)!;
+    if (match.winnerId === deck.id) {
+      stats.wins++;
+    } else if (match.winnerId === opponentDeck.id) {
+      stats.losses++;
+    } else {
+      stats.ties++;
+    }
+  });
 
   // Scroll to deck details heading after deck loads
 
@@ -220,6 +270,175 @@ export default function ViewDeckPage() {
           </CardBody>
         </Card>
       </div>
+
+      {/* Matchup Statistics */}
+      {matchupStats.size > 0 && (
+        <Card className="mt-6">
+          <CardHeader>
+            <h2 className="text-xl font-semibold">Matchup Statistics</h2>
+          </CardHeader>
+          <CardBody>
+            <Table aria-label="Deck Matchup Statistics">
+              <TableHeader>
+                <TableColumn>OPPONENT DECK</TableColumn>
+                {/* <TableColumn>ARCHETYPE</TableColumn> */}
+                <TableColumn>WINS</TableColumn>
+                <TableColumn>LOSSES</TableColumn>
+                <TableColumn>TIES</TableColumn>
+                <TableColumn>WIN RATE</TableColumn>
+              </TableHeader>
+              <TableBody>
+                {Array.from(matchupStats.entries())
+                  .sort(([, a], [, b]) => {
+                    const aTotal = a.wins + a.losses + a.ties;
+                    const bTotal = b.wins + b.losses + b.ties;
+                    const aWinRate = aTotal > 0 ? (a.wins / aTotal) * 100 : 0;
+                    const bWinRate = bTotal > 0 ? (b.wins / bTotal) * 100 : 0;
+                    return bWinRate - aWinRate; // Sort by win rate descending
+                  })
+                  .map(([key, stats]) => {
+                    const total = stats.wins + stats.losses + stats.ties;
+                    const winRate =
+                      total > 0 ? ((stats.wins / total) * 100).toFixed(1) : "0";
+
+                    return (
+                      <TableRow key={key}>
+                        <TableCell>
+                          <User
+                            name={stats.deckName}
+                            description={stats.archetypeName}
+                            avatarProps={{
+                              src: stats.avatar || undefined,
+                              size: "sm",
+                              radius: "lg",
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-success font-semibold">
+                            {stats.wins}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-danger font-semibold">
+                            {stats.losses}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-warning font-semibold">
+                            {stats.ties}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            color={
+                              parseFloat(winRate) >= 75
+                                ? "success"
+                                : parseFloat(winRate) >= 50
+                                  ? "warning"
+                                  : "danger"
+                            }
+                            variant="flat"
+                            size="sm"
+                          >
+                            {winRate}%
+                          </Chip>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+              </TableBody>
+            </Table>
+          </CardBody>
+        </Card>
+      )}
+
+      {/* Tournament Statistics */}
+      {deck.tournamentStats.length > 0 && (
+        <Card className="mt-6">
+          <CardHeader>
+            <h2 className="text-xl font-semibold">Tournament Performance</h2>
+          </CardHeader>
+          <CardBody>
+            <Table aria-label="Tournament Performance">
+              <TableHeader>
+                <TableColumn>TOURNAMENT</TableColumn>
+                <TableColumn>DATE</TableColumn>
+                <TableColumn>WINS</TableColumn>
+                <TableColumn>LOSSES</TableColumn>
+                <TableColumn>TIES</TableColumn>
+                <TableColumn>WIN RATE</TableColumn>
+              </TableHeader>
+              <TableBody>
+                {deck.tournamentStats
+                  .sort(
+                    (a, b) =>
+                      new Date(b.tournament?.startDate || 0).getTime() -
+                      new Date(a.tournament?.startDate || 0).getTime()
+                  )
+                  .map((stat, index) => {
+                    const totalGames = stat.wins + stat.losses + stat.ties;
+                    const winRate =
+                      totalGames > 0
+                        ? ((stat.wins / totalGames) * 100).toFixed(1)
+                        : "0";
+
+                    return (
+                      <TableRow key={index}>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-semibold">
+                              {stat.tournament?.name || "Unknown Tournament"}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-small">
+                            {stat.tournament?.startDate
+                              ? new Date(
+                                  stat.tournament.startDate
+                                ).toLocaleDateString()
+                              : "Unknown Date"}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-success font-semibold">
+                            {stat.wins}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-danger font-semibold">
+                            {stat.losses}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-warning font-semibold">
+                            {stat.ties}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            color={
+                              parseFloat(winRate) >= 75
+                                ? "success"
+                                : parseFloat(winRate) >= 50
+                                  ? "warning"
+                                  : "danger"
+                            }
+                            variant="flat"
+                            size="sm"
+                          >
+                            {winRate}%
+                          </Chip>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+              </TableBody>
+            </Table>
+          </CardBody>
+        </Card>
+      )}
     </div>
   );
 }
