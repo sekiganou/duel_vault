@@ -9,7 +9,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model deck {
+model Deck {
   id           Int       @id @default(autoincrement())
   avatar       String?
   name         String
@@ -57,13 +57,13 @@ model Match {
   tournament    Tournament? @relation(fields: [tournamentId], references: [id])
   tournamentId  Int?
 
-  deckA         deck      @relation("DeckA", fields: [deckAId], references: [id])
+  deckA         Deck      @relation("DeckA", fields: [deckAId], references: [id])
   deckAId       Int
 
-  deckB         deck      @relation("DeckB", fields: [deckBId], references: [id])
+  deckB         Deck      @relation("DeckB", fields: [deckBId], references: [id])
   deckBId       Int
 
-  winner        deck?     @relation("Winner", fields: [winnerId], references: [id])
+  winner        Deck?     @relation("Winner", fields: [winnerId], references: [id])
   winnerId      Int?
 
   deckAScore    Int
@@ -80,7 +80,7 @@ model Archetype {
   id    Int    @id @default(autoincrement())
   name  String @unique
 
-  decks deck[]
+  decks Deck[]
 
   @@map("archetypes")
 }
@@ -89,7 +89,7 @@ model Format {
   id    Int    @id @default(autoincrement())
   name  String @unique
 
-  decks       deck[]
+  decks       Deck[]
   tournaments Tournament[]
 
   @@map("formats")
@@ -97,13 +97,12 @@ model Format {
 
 model TournamentDeckStats {
   id           Int        @id @default(autoincrement())
-  tournament   Tournament @relation(fields: [tournamentId], references: [id])
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   tournamentId Int
 
-  deck         deck       @relation(fields: [deckId], references: [id])
+  deck         Deck       @relation(fields: [deckId], references: [id])
   deckId       Int
 
-  finalRank    Int
   wins         Int
   losses       Int
   ties         Int

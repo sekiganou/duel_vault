@@ -9,7 +9,7 @@ import {
 } from "@/lib/api/matches";
 import { getAllDecks } from "@/lib/api/decks";
 import {
-  Deck,
+  DeckWithRelations,
   MatchWithRelations,
   StatusOptionDescriptor,
   TableColumnDescriptor,
@@ -39,6 +39,8 @@ import { FullTable } from "@/components/fullTable";
 import { addToast } from "@heroui/toast";
 import { Input } from "@heroui/input";
 import { User } from "@heroui/user";
+import { getAllTournaments } from "@/lib/api/tournaments";
+import Link from "next/link";
 
 const columns: TableColumnDescriptor[] = [
   { name: "ID", uid: "id", sortable: true },
@@ -139,7 +141,7 @@ const UpsertModal = ({
 }: {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  decks: Deck[];
+  decks: DeckWithRelations[];
   tournaments: Tournament[];
   handleGetAllMatches: () => Promise<void>;
   match: MatchWithRelations | null;
@@ -155,7 +157,8 @@ const UpsertModal = ({
   const [date, setDate] = useState("");
   const [loadingCreateMatch, setLoadingCreateMatch] = useState(false);
 
-  const getDeckName = (deck: Deck) => `${deck.name} (${deck.archetype.name})`;
+  const getDeckName = (deck: DeckWithRelations) =>
+    `${deck.name} (${deck.archetype.name})`;
 
   useEffect(() => {
     handleReset();
@@ -198,6 +201,7 @@ const UpsertModal = ({
     })
       .then(() => {
         handleGetAllMatches();
+
         onOpenChange(false);
       })
       .finally(() => {
@@ -216,7 +220,7 @@ const UpsertModal = ({
               {isEdit ? "Edit Match" : "Create New Match"}
             </ModalHeader>
             <ModalBody>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ">
                 <Select
                   label="Tournament (Optional)"
                   placeholder="Select a tournament"
@@ -278,7 +282,16 @@ const UpsertModal = ({
                   type="number"
                   label="Deck A Score"
                   value={deckAScore}
-                  onChange={(e) => setDeckAScore(e.target.value)}
+                  onChange={(e) => {
+                    setDeckAScore(e.target.value);
+                    setWinnerId(
+                      Number(e.target.value) == Number(deckBScore)
+                        ? ""
+                        : Number(e.target.value) > Number(deckBScore)
+                          ? deckAId
+                          : deckBId
+                    );
+                  }}
                   min="0"
                   isRequired
                 />
@@ -287,7 +300,16 @@ const UpsertModal = ({
                   type="number"
                   label="Deck B Score"
                   value={deckBScore}
-                  onChange={(e) => setDeckBScore(e.target.value)}
+                  onChange={(e) => {
+                    setDeckBScore(e.target.value);
+                    setWinnerId(
+                      Number(e.target.value) == Number(deckAScore)
+                        ? ""
+                        : Number(e.target.value) > Number(deckAScore)
+                          ? deckBId
+                          : deckAId
+                    );
+                  }}
                   min="0"
                   isRequired
                 />
@@ -344,7 +366,7 @@ const UpsertModal = ({
 
 export default function MatchesPage() {
   const [matches, setMatches] = useState<MatchWithRelations[]>([]);
-  const [decks, setDecks] = useState<Deck[]>([]);
+  const [decks, setDecks] = useState<DeckWithRelations[]>([]);
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loadingMatches, setLoadingMatches] = useState(true);
   const [selectedMatch, setSelectedMatch] = useState<MatchWithRelations | null>(
@@ -373,19 +395,10 @@ export default function MatchesPage() {
       setDecks(decks);
 
       const matches = await getAllMatches();
-      const matchesWithAvatars = matches.map((match) => {
-        const deckA = decks.find((deck) => deck.id === match.deckAId);
-        const deckB = decks.find((deck) => deck.id === match.deckBId);
-        return {
-          ...match,
-          deckA: { ...match.deckA, avatar: deckA?.avatar ?? "" },
-          deckB: { ...match.deckB, avatar: deckB?.avatar ?? "" },
-        };
-      });
-      setMatches(matchesWithAvatars);
+      setMatches(matches);
 
-      // TODO: Add tournaments API when available
-      setTournaments([]);
+      const tournaments = await getAllTournaments();
+      setTournaments(tournaments);
     } finally {
       setLoadingMatches(false);
     }
@@ -425,7 +438,13 @@ export default function MatchesPage() {
         case "result":
           return (
             <Chip
-              color={match.winner ? "success" : "warning"}
+              color={
+                match.winner
+                  ? match.winner.id === match.deckA.id
+                    ? "success"
+                    : "danger"
+                  : "warning"
+              }
               variant="flat"
               size="sm"
             >
@@ -449,9 +468,19 @@ export default function MatchesPage() {
             <Chip
               color={statusColorMap[getMatchStatus(match)]}
               variant="flat"
-              size={"sm"}
+              size="sm"
+              className="px-2 py-1 text-xs font-medium"
             >
-              {match.tournament ? match.tournament.name : "Friendly Match"}
+              {match.tournament ? (
+                <Link
+                  href={`/tournaments/${match.tournament.id}`}
+                  className="underline hover:text-primary transition-colors"
+                >
+                  {match.tournament.name}
+                </Link>
+              ) : (
+                <span>Friendly Match</span>
+              )}
             </Chip>
           );
         case "actions":

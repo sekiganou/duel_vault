@@ -2,7 +2,7 @@ export type SiteConfig = typeof siteConfig;
 
 export const siteConfig = {
   name: "Duel Vault",
-  description: "Make beautiful websites regardless of your design experience.",
+  description: "A modern web app for managing card game decks and matches.",
   navItems: [
     {
       label: "Home",
@@ -16,8 +16,9 @@ export const siteConfig = {
       label: "Matches",
       href: "/matches",
     },
+    {
+      label: "Tournaments",
+      href: "/tournaments",
+    },
   ],
-  links: {
-    docs: "https://heroui.com",
-  },
 };

@@ -1,12 +1,13 @@
 import axios from "axios";
 import { size, z } from "zod";
 import { UpsertDeckSchema } from "../schemas/decks";
-import { Deck } from "@/types";
-import { getMinioClient } from "@/s3";
+import { DeckWithRelations } from "@/types";
+import { getMinioClient, S3_BUCKET } from "@/s3";
 import { addToast } from "@heroui/toast";
 import { deleteFile, uploadFile } from "./minio";
 import { ChipProps } from "@heroui/chip";
 import { Button } from "@heroui/button";
+import { getAvatarUrl } from "./avatarCache";
 
 const basePath = "/api/decks";
 
@@ -15,18 +16,56 @@ export const statusColorMap: Record<string, ChipProps["color"]> = {
   inactive: "default",
 };
 
-export function getDeckStatus(deck: Deck): string {
+export function getDeckStatus(deck: DeckWithRelations): string {
   return deck.active ? "active" : "inactive";
 }
 
-export async function getAllDecks(): Promise<Deck[]> {
+export async function getAllDecks(): Promise<DeckWithRelations[]> {
   const res = await axios.get(basePath);
-  return res.data;
+  const decks: DeckWithRelations[] = res.data;
+
+  // Replace avatar paths with cached presigned URLs
+  await Promise.all(
+    decks.map(async (deck) => {
+      if (deck.avatar) {
+        const presignedUrl = await getAvatarUrl(deck.avatar);
+        if (presignedUrl) {
+          deck.avatar = presignedUrl;
+        }
+      }
+    })
+  );
+
+  return decks;
 }
 
-export async function getDeckById(id: number): Promise<Deck> {
+export async function getDeckById(id: number): Promise<DeckWithRelations> {
   const res = await axios.get(`${basePath}/${id}`);
-  return res.data;
+  const deck: DeckWithRelations = res.data;
+
+  // Replace avatar path with cached presigned URL
+  if (deck.avatar) {
+    const presignedUrl = await getAvatarUrl(deck.avatar);
+    if (presignedUrl) {
+      deck.avatar = presignedUrl;
+    }
+  }
+
+  deck.matchesA.forEach(async (match) => {
+    if (deck.id !== match.deckAId && match.deckA.avatar)
+      match.deckA.avatar = await getAvatarUrl(match.deckA.avatar);
+    if (deck.id !== match.deckBId && match.deckB.avatar)
+      match.deckB.avatar = await getAvatarUrl(match.deckB.avatar);
+  });
+
+  deck.matchesB.forEach(async (match) => {
+    if (deck.id !== match.deckAId && match.deckA.avatar)
+      match.deckA.avatar = await getAvatarUrl(match.deckA.avatar);
+    if (deck.id !== match.deckBId && match.deckB.avatar)
+      match.deckB.avatar = await getAvatarUrl(match.deckB.avatar);
+  });
+
+  return deck;
 }
 
 export async function upsertDeck(
@@ -72,7 +111,6 @@ export async function upsertDeck(
     }
     addToast({
       title: `Failed to update deck. Please try again`,
-      description: "Ensure all fields are filled out correctly.",
       color: "danger",
     });
   }

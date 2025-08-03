@@ -1,9 +1,9 @@
+import { withErrorHandler } from "@/lib/middlewares/withErrorHandler";
 import { DeleteObjectSchema, UploadObjectSchema } from "@/lib/schemas/minio";
 import { getMinioClient, S3_BUCKET } from "@/s3";
-import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function POST(req: NextRequest) {
+export const POST = withErrorHandler(async (req: NextRequest) => {
   const body = await req.json();
   const { filename, contentType } = UploadObjectSchema.parse(body);
 
@@ -22,9 +22,9 @@ export async function POST(req: NextRequest) {
   const url = await minio.presignedPutObject(S3_BUCKET, filename, 24 * 60 * 60);
 
   return NextResponse.json({ url });
-}
+});
 
-export async function DELETE(req: NextRequest) {
+export const DELETE = withErrorHandler(async (req: NextRequest) => {
   const { searchParams } = new URL(req.url);
   const parsedSearchParams = DeleteObjectSchema.safeParse(
     Object.fromEntries(searchParams)
@@ -57,4 +57,4 @@ export async function DELETE(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

@@ -15,22 +15,9 @@ export const GET = withErrorHandler(async () => {
     },
   });
 
-  const minio = getMinioClient();
-
-  const bucketExists = await minio.bucketExists(S3_BUCKET);
-  if (bucketExists)
-    await Promise.all(
-      items.map(async (item) => {
-        if (item.avatar) {
-          item.avatar = await minio.presignedGetObject(
-            S3_BUCKET,
-            item.avatar,
-            60 * 60 * 24
-          );
-        }
-      })
-    );
-
+  // Note: Avatar URLs should be managed through the avatar-cache API
+  // This endpoint now returns the avatar path, and the client should
+  // use the avatar cache to get presigned URLs
   return NextResponse.json(items);
 });
 
@@ -54,4 +41,3 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
   return NextResponse.json({ success: true, item: item });
 });
-

@@ -8,7 +8,11 @@ import {
   getDeckStatus,
   statusColorMap,
 } from "@/lib/api/decks";
-import { Deck, StatusOptionDescriptor, TableColumnDescriptor } from "@/types";
+import {
+  DeckWithRelations,
+  StatusOptionDescriptor,
+  TableColumnDescriptor,
+} from "@/types";
 import { User } from "@heroui/user";
 import { Selection } from "@react-types/shared";
 
@@ -79,7 +83,7 @@ const DeleteModal = ({
 }: {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  deck: Deck | null;
+  deck: DeckWithRelations | null;
   handleGetAllDecks: () => Promise<void>;
 }) => {
   const [loadingDelete, setLoadingDelete] = useState(false);
@@ -142,7 +146,7 @@ const UpsertModal = ({
   archetypes: Archetype[];
   handleGetAllDecks: () => Promise<void>;
   handleGetAllArchetypes: () => Promise<void>;
-  deck: Deck | null;
+  deck: DeckWithRelations | null;
 }) => {
   const isEdit = !!deck;
   const [deckAvatarName, setDeckAvatarName] = useState<string | null>(null);
@@ -394,11 +398,13 @@ const UpsertModal = ({
 };
 
 export default function DecksPage() {
-  const [decks, setDecks] = useState(new Array<Deck>());
+  const [decks, setDecks] = useState(new Array<DeckWithRelations>());
   const [formats, setFormats] = useState(new Array<Format>());
   const [archetypes, setArchetypes] = useState(new Array<Archetype>());
   const [loadingDecks, setLoadingDecks] = useState(true);
-  const [selectedDeck, setSelectedDeck] = useState<Deck | null>(null);
+  const [selectedDeck, setSelectedDeck] = useState<DeckWithRelations | null>(
+    null
+  );
   const router = useRouter();
   const {
     isOpen: isOpenCreateModal,
@@ -436,8 +442,8 @@ export default function DecksPage() {
   }, []);
 
   const renderCell = useCallback(
-    (deck: Deck, columnKey: React.Key) => {
-      const cellValue = deck[columnKey as keyof Deck];
+    (deck: DeckWithRelations, columnKey: React.Key) => {
+      const cellValue = deck[columnKey as keyof DeckWithRelations];
 
       switch (columnKey) {
         case "name":
@@ -535,10 +541,10 @@ export default function DecksPage() {
         renderCell={renderCell}
         getStatus={getDeckStatus}
         onOpenCreateModal={onOpenCreateModal}
-        searchFilter={(deck: Deck, filterValue: string) =>
+        searchFilter={(deck: DeckWithRelations, filterValue: string) =>
           deck.name.toLowerCase().includes(filterValue.toLowerCase())
         }
-        getItemKey={(deck: Deck) => deck.id}
+        getItemKey={(deck: DeckWithRelations) => deck.id}
       />
 
       <UpsertModal

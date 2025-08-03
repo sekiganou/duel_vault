@@ -1,5 +1,6 @@
 import axios from "axios";
 import { DeleteObjectSchema, UploadObjectSchema } from "../schemas/minio";
+import { getMinioClient, S3_BUCKET } from "@/s3";
 
 // Client-safe UUID generator
 function randomUUID(): string {
