@@ -386,7 +386,7 @@ export default function Home() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-col sm:flex-row">
                     <Chip size="sm" variant="flat" color="primary">
                       {tournament.deckStats.length} Participants
                     </Chip>

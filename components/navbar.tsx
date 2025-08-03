@@ -57,7 +57,7 @@ export const Navbar = () => {
             <p className="font-bold text-inherit">DUEL VAULT</p>
           </NextLink>
         </NavbarBrand>
-        <ul className="hidden sm:flex gap-4 justify-start ml-2">
+        <ul className="hidden sm:flex gap-4 justify-start ml-12">
           {siteConfig.navItems.map((item) => (
             <NavbarItem key={item.href}>
               <NextLink
