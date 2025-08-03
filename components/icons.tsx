@@ -17,10 +17,7 @@ export const Logo: React.FC<LogoProps> = ({
   ...props
 }) => {
   const { theme } = useTheme();
-  const src =
-    theme === "light"
-      ? "/web-app-manifest-white-192x192.png"
-      : "/web-app-manifest-192x192.png";
+  const src = theme === "light" ? "/logo-light.png" : "/logo-dark.png";
   return (
     <img
       src={src}

@@ -307,30 +307,34 @@ export default function ViewTournamentPage() {
                 </TableHeader>
                 <TableBody>
                   {tournament.deckStats
-                    .sort((a, b) => a.finalRank - b.finalRank)
-                    .map((deckStat) => {
+                    .sort((a, b) => b.wins - a.wins)
+                    .map((deckStat, index) => {
                       const totalGames =
                         deckStat.wins + deckStat.losses + deckStat.ties;
                       const winRate =
                         totalGames > 0
                           ? ((deckStat.wins / totalGames) * 100).toFixed(1)
                           : "0";
+                      const finalRank = index + 1;
 
                       return (
                         <TableRow key={deckStat.id}>
                           <TableCell>
                             <div className="flex items-center gap-2">
-                              {deckStat.finalRank === 1 && (
+                              {finalRank === 1 && (
                                 <span className="text-yellow-500">🥇</span>
                               )}
-                              {deckStat.finalRank === 2 && (
+                              {finalRank === 2 && (
                                 <span className="text-gray-400">🥈</span>
                               )}
-                              {deckStat.finalRank === 3 && (
+                              {finalRank === 3 && (
                                 <span className="text-orange-600">🥉</span>
                               )}
+                              {finalRank > 3 && (
+                                <span className="text-default-400">🔹</span>
+                              )}
                               <span className="font-semibold">
-                                #{deckStat.finalRank}
+                                #{finalRank}
                               </span>
                             </div>
                           </TableCell>
@@ -341,6 +345,7 @@ export default function ViewTournamentPage() {
                               avatarProps={{
                                 src: deckStat.deck.avatar || undefined,
                                 size: "sm",
+                                radius: "lg",
                               }}
                             />
                           </TableCell>
@@ -404,6 +409,7 @@ export default function ViewTournamentPage() {
                           <User
                             name={match.deckA.name}
                             description={match.deckA.archetype.name}
+                            className="shrink-0"
                             avatarProps={{
                               src: match.deckA.avatar || undefined,
                               size: "sm",
@@ -415,6 +421,7 @@ export default function ViewTournamentPage() {
                           <User
                             name={match.deckB.name}
                             description={match.deckB.archetype.name}
+                            className="shrink-0"
                             avatarProps={{
                               src: match.deckB.avatar || undefined,
                               size: "sm",

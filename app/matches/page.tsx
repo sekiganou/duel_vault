@@ -40,6 +40,7 @@ import { addToast } from "@heroui/toast";
 import { Input } from "@heroui/input";
 import { User } from "@heroui/user";
 import { getAllTournaments } from "@/lib/api/tournaments";
+import Link from "next/link";
 
 const columns: TableColumnDescriptor[] = [
   { name: "ID", uid: "id", sortable: true },
@@ -200,6 +201,7 @@ const UpsertModal = ({
     })
       .then(() => {
         handleGetAllMatches();
+
         onOpenChange(false);
       })
       .finally(() => {
@@ -280,7 +282,16 @@ const UpsertModal = ({
                   type="number"
                   label="Deck A Score"
                   value={deckAScore}
-                  onChange={(e) => setDeckAScore(e.target.value)}
+                  onChange={(e) => {
+                    setDeckAScore(e.target.value);
+                    setWinnerId(
+                      Number(e.target.value) == Number(deckBScore)
+                        ? ""
+                        : Number(e.target.value) > Number(deckBScore)
+                          ? deckAId
+                          : deckBId
+                    );
+                  }}
                   min="0"
                   isRequired
                 />
@@ -289,7 +300,16 @@ const UpsertModal = ({
                   type="number"
                   label="Deck B Score"
                   value={deckBScore}
-                  onChange={(e) => setDeckBScore(e.target.value)}
+                  onChange={(e) => {
+                    setDeckBScore(e.target.value);
+                    setWinnerId(
+                      Number(e.target.value) == Number(deckAScore)
+                        ? ""
+                        : Number(e.target.value) > Number(deckAScore)
+                          ? deckBId
+                          : deckAId
+                    );
+                  }}
                   min="0"
                   isRequired
                 />
@@ -448,9 +468,19 @@ export default function MatchesPage() {
             <Chip
               color={statusColorMap[getMatchStatus(match)]}
               variant="flat"
-              size={"sm"}
+              size="sm"
+              className="px-2 py-1 text-xs font-medium"
             >
-              {match.tournament ? match.tournament.name : "Friendly Match"}
+              {match.tournament ? (
+                <Link
+                  href={`/tournaments/${match.tournament.id}`}
+                  className="underline hover:text-primary transition-colors"
+                >
+                  {match.tournament.name}
+                </Link>
+              ) : (
+                <span>Friendly Match</span>
+              )}
             </Chip>
           );
         case "actions":

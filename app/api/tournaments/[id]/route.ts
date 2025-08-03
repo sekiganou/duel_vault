@@ -56,9 +56,6 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
             },
           },
         },
-        orderBy: {
-          finalRank: "asc",
-        },
       },
     },
   });

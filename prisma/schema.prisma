@@ -97,13 +97,12 @@ model Format {
 
 model TournamentDeckStats {
   id           Int        @id @default(autoincrement())
-  tournament   Tournament @relation(fields: [tournamentId], references: [id])
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   tournamentId Int
 
   deck         Deck       @relation(fields: [deckId], references: [id])
   deckId       Int
 
-  finalRank    Int
   wins         Int
   losses       Int
   ties         Int

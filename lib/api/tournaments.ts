@@ -29,6 +29,14 @@ export async function getTournamentById(
       }
     }
   });
+  tournament.deckStats.map(async (deckStat) => {
+    if (deckStat.deck.avatar) {
+      const presignedUrl = await getAvatarUrl(deckStat.deck.avatar);
+      if (presignedUrl) {
+        deckStat.deck.avatar = presignedUrl;
+      }
+    }
+  });
   return res.data;
 }
 

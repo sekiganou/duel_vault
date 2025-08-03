@@ -5,7 +5,7 @@ import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Chip } from "@heroui/chip";
 import { User } from "@heroui/user";
 import { Button } from "@heroui/button";
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { getAllDecks } from "@/lib/api/decks";
 import { getAllMatches } from "@/lib/api/matches";
 import {
@@ -25,6 +25,8 @@ import { useRouter } from "next/navigation";
 import { Spinner } from "@heroui/spinner";
 import { Skeleton } from "@heroui/skeleton";
 import { getAllTournaments } from "@/lib/api/tournaments";
+import { Image } from "@heroui/image";
+import { useTheme } from "next-themes";
 
 export default function Home() {
   const [decks, setDecks] = useState<DeckWithRelations[]>([]);
@@ -133,10 +135,8 @@ export default function Home() {
       </>
     );
   }
-
   return (
     <section className="flex flex-col gap-6 py-8 md:py-10 max-w-7xl mx-auto px-4">
-      {/* Header */}
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold mb-2">Duel Vault Dashboard</h1>
         <p className="text-lg text-default-600">

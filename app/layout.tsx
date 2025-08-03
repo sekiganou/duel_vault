@@ -34,8 +34,9 @@ export default function RootLayout({
 }) {
   return (
     <html suppressHydrationWarning lang="en">
-      <head />
-      <meta name="apple-mobile-web-app-title" content="Duel Vault" />
+      <head>
+        <meta name="apple-mobile-web-app-title" content="Duel Vault" />
+      </head>
       <body
         className={clsx(
           "min-h-screen text-foreground bg-background font-sans antialiased",
