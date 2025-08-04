@@ -54,7 +54,9 @@ export const Navbar = () => {
             onClick={() => setSelectedLabel(siteConfig.navItems[0].label)}
           >
             <Logo />
-            <p className="font-bold text-inherit">DUEL VAULT</p>
+            <p className="font-bold text-inherit">
+              {siteConfig.name.toUpperCase()}
+            </p>
           </NextLink>
         </NavbarBrand>
         <ul className="hidden sm:flex gap-4 justify-start ml-12">

@@ -261,6 +261,14 @@ export default function Home() {
                     >
                       {match.deckAScore}-{match.deckBScore}
                     </Chip>
+                    <Button
+                      onPress={() => router.push(`/matches/${match.id}`)}
+                      variant="light"
+                      size="sm"
+                      className="ml-3"
+                    >
+                      View
+                    </Button>
                   </div>
                 </div>
               ))
