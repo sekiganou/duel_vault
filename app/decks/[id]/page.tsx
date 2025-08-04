@@ -155,176 +155,6 @@ export default function ViewDeckPage() {
     }
   });
 
-  const tabs: CardTabItem[] = [
-    {
-      key: "matchup-statistics",
-      title: "Matchup Statistics",
-      emptyContent: {
-        header: "No Matchup Data",
-        text: "This deck has not played any matches yet.",
-        icon: (props) => <IconSwords {...props} />,
-        displayEmptyContent: matchupStats.size === 0,
-      },
-      cardBody: (
-        <Table aria-label="Deck Matchup Statistics">
-          <TableHeader>
-            <TableColumn>OPPONENT DECK</TableColumn>
-            <TableColumn>WINS</TableColumn>
-            <TableColumn>LOSSES</TableColumn>
-            <TableColumn>TIES</TableColumn>
-            <TableColumn>WIN RATE</TableColumn>
-          </TableHeader>
-          <TableBody>
-            {Array.from(matchupStats.entries())
-              .sortByWinsAndLosses(
-                (stats) => stats[1].wins,
-                (stats) => stats[1].losses
-              )
-              .map(([key, stats]) => {
-                const total = stats.wins + stats.losses + stats.ties;
-                const winRate =
-                  total > 0 ? ((stats.wins / total) * 100).toFixed(1) : "0";
-
-                return (
-                  <TableRow key={key}>
-                    <TableCell>
-                      <User
-                        name={stats.deckName}
-                        description={stats.archetypeName}
-                        avatarProps={{
-                          src: stats.avatar || undefined,
-                          size: "sm",
-                          radius: "lg",
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-success font-semibold">
-                        {stats.wins}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-danger font-semibold">
-                        {stats.losses}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-warning font-semibold">
-                        {stats.ties}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        color={
-                          parseFloat(winRate) >= 75
-                            ? "success"
-                            : parseFloat(winRate) >= 50
-                              ? "warning"
-                              : "danger"
-                        }
-                        variant="flat"
-                        size="sm"
-                      >
-                        {winRate}%
-                      </Chip>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-          </TableBody>
-        </Table>
-      ),
-    },
-    {
-      key: "tournament-performance",
-      title: "Tournament Performance",
-      emptyContent: {
-        header: "No Tournament Data",
-        text: "This deck hasn't participated in any tournaments yet.",
-        icon: (props) => <IconTrophy {...props} />,
-        displayEmptyContent: deck.tournamentStats.length === 0,
-      },
-      cardBody: (
-        <Table aria-label="Tournament Performance">
-          <TableHeader>
-            <TableColumn>TOURNAMENT</TableColumn>
-            <TableColumn>DATE</TableColumn>
-            <TableColumn>WINS</TableColumn>
-            <TableColumn>LOSSES</TableColumn>
-            <TableColumn>TIES</TableColumn>
-            <TableColumn>WIN RATE</TableColumn>
-          </TableHeader>
-          <TableBody>
-            {deck.tournamentStats
-              .sort(
-                (a, b) =>
-                  new Date(b.tournament?.startDate || 0).getTime() -
-                  new Date(a.tournament?.startDate || 0).getTime()
-              )
-              .map((stat, index) => {
-                const totalGames = stat.wins + stat.losses + stat.ties;
-                const winRate =
-                  totalGames > 0
-                    ? ((stat.wins / totalGames) * 100).toFixed(1)
-                    : "0";
-
-                return (
-                  <TableRow key={index}>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-semibold">
-                          {stat.tournament?.name || "Unknown Tournament"}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-small">
-                        {stat.tournament?.startDate
-                          ? new Date(
-                              stat.tournament.startDate
-                            ).toLocaleDateString()
-                          : "Unknown Date"}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-success font-semibold">
-                        {stat.wins}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-danger font-semibold">
-                        {stat.losses}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-warning font-semibold">
-                        {stat.ties}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        color={
-                          parseFloat(winRate) >= 75
-                            ? "success"
-                            : parseFloat(winRate) >= 50
-                              ? "warning"
-                              : "danger"
-                        }
-                        variant="flat"
-                        size="sm"
-                      >
-                        {winRate}%
-                      </Chip>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-          </TableBody>
-        </Table>
-      ),
-    },
-  ];
-
   return (
     <div
       className="container mx-auto px-4 py-8 max-w-4xl"
@@ -453,7 +283,179 @@ export default function ViewDeckPage() {
 
       <Divider className="my-8" />
 
-      <CardTabs tabs={tabs} />
+      <CardTabs
+        tabs={[
+          {
+            key: "matchup-statistics",
+            title: "Matchup Statistics",
+            emptyContent: {
+              header: "No Matchup Data",
+              text: "This deck has not played any matches yet.",
+              icon: (props) => <IconSwords {...props} />,
+              displayEmptyContent: matchupStats.size === 0,
+            },
+            cardBody: (
+              <Table aria-label="Deck Matchup Statistics">
+                <TableHeader>
+                  <TableColumn>OPPONENT DECK</TableColumn>
+                  <TableColumn>WINS</TableColumn>
+                  <TableColumn>LOSSES</TableColumn>
+                  <TableColumn>TIES</TableColumn>
+                  <TableColumn>WIN RATE</TableColumn>
+                </TableHeader>
+                <TableBody>
+                  {Array.from(matchupStats.entries())
+                    .sortByWinsAndLosses(
+                      (stats) => stats[1].wins,
+                      (stats) => stats[1].losses
+                    )
+                    .map(([key, stats]) => {
+                      const total = stats.wins + stats.losses + stats.ties;
+                      const winRate =
+                        total > 0
+                          ? ((stats.wins / total) * 100).toFixed(1)
+                          : "0";
+
+                      return (
+                        <TableRow key={key}>
+                          <TableCell>
+                            <User
+                              name={stats.deckName}
+                              description={stats.archetypeName}
+                              avatarProps={{
+                                src: stats.avatar || undefined,
+                                size: "sm",
+                                radius: "lg",
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-success font-semibold">
+                              {stats.wins}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-danger font-semibold">
+                              {stats.losses}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-warning font-semibold">
+                              {stats.ties}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              color={
+                                parseFloat(winRate) >= 75
+                                  ? "success"
+                                  : parseFloat(winRate) >= 50
+                                    ? "warning"
+                                    : "danger"
+                              }
+                              variant="flat"
+                              size="sm"
+                            >
+                              {winRate}%
+                            </Chip>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                </TableBody>
+              </Table>
+            ),
+          },
+          {
+            key: "tournament-performance",
+            title: "Tournament Performance",
+            emptyContent: {
+              header: "No Tournament Data",
+              text: "This deck hasn't participated in any tournaments yet.",
+              icon: (props) => <IconTrophy {...props} />,
+              displayEmptyContent: deck.tournamentStats.length === 0,
+            },
+            cardBody: (
+              <Table aria-label="Tournament Performance">
+                <TableHeader>
+                  <TableColumn>TOURNAMENT</TableColumn>
+                  <TableColumn>DATE</TableColumn>
+                  <TableColumn>WINS</TableColumn>
+                  <TableColumn>LOSSES</TableColumn>
+                  <TableColumn>TIES</TableColumn>
+                  <TableColumn>WIN RATE</TableColumn>
+                </TableHeader>
+                <TableBody>
+                  {deck.tournamentStats
+                    .sort(
+                      (a, b) =>
+                        new Date(b.tournament?.startDate || 0).getTime() -
+                        new Date(a.tournament?.startDate || 0).getTime()
+                    )
+                    .map((stat, index) => {
+                      const totalGames = stat.wins + stat.losses + stat.ties;
+                      const winRate =
+                        totalGames > 0
+                          ? ((stat.wins / totalGames) * 100).toFixed(1)
+                          : "0";
+
+                      return (
+                        <TableRow key={index}>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="font-semibold">
+                                {stat.tournament?.name || "Unknown Tournament"}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-small">
+                              {stat.tournament?.startDate
+                                ? new Date(
+                                    stat.tournament.startDate
+                                  ).toLocaleDateString()
+                                : "Unknown Date"}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-success font-semibold">
+                              {stat.wins}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-danger font-semibold">
+                              {stat.losses}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-warning font-semibold">
+                              {stat.ties}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              color={
+                                parseFloat(winRate) >= 75
+                                  ? "success"
+                                  : parseFloat(winRate) >= 50
+                                    ? "warning"
+                                    : "danger"
+                              }
+                              variant="flat"
+                              size="sm"
+                            >
+                              {winRate}%
+                            </Chip>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                </TableBody>
+              </Table>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

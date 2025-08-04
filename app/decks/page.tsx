@@ -526,6 +526,14 @@ export default function DecksPage() {
     [onOpenEditModal, onOpenDeleteModal]
   );
 
+  const searchFilter = (deck: DeckWithRelations, filterValue: string) => {
+    return (
+      deck.archetype.name.toLowerCase().includes(filterValue.toLowerCase()) ||
+      deck.name.toLowerCase().includes(filterValue.toLowerCase()) ||
+      deck.format.name.toLowerCase().includes(filterValue.toLowerCase())
+    );
+  };
+
   return (
     <div className="w-full max-w-7xl mx-auto px-4">
       <div className="flex justify-between items-center mb-6">
@@ -541,9 +549,7 @@ export default function DecksPage() {
         renderCell={renderCell}
         getStatus={getDeckStatus}
         onOpenCreateModal={onOpenCreateModal}
-        searchFilter={(deck: DeckWithRelations, filterValue: string) =>
-          deck.name.toLowerCase().includes(filterValue.toLowerCase())
-        }
+        searchFilter={searchFilter}
         getItemKey={(deck: DeckWithRelations) => deck.id}
       />
 
