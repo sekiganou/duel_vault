@@ -27,6 +27,7 @@ import {
   TableRow,
 } from "@heroui/table";
 import { User } from "@heroui/user";
+import "@/lib/extensions/array";
 
 const getTournamentStatus = (tournament: TournamentWithRelations): string => {
   const now = new Date();
@@ -307,7 +308,51 @@ export default function ViewTournamentPage() {
                 </TableHeader>
                 <TableBody>
                   {tournament.deckStats
-                    .sort((a, b) => b.wins - a.wins)
+                    .sortByWinsAndLosses(
+                      (deckStat) => deckStat.wins,
+                      (deckStat) => deckStat.losses
+                    )
+                    .sort((a, b) => {
+                      // If wins and losses are the same, use last match date as tiebreaker
+                      if (a.wins === b.wins && a.losses === b.losses) {
+                        // Find each deck's last match (their elimination match or final match)
+                        const aDeckMatches = tournament.matches
+                          .filter(
+                            (match) =>
+                              match.deckA.id === a.deckId ||
+                              match.deckB.id === a.deckId
+                          )
+                          .sort(
+                            (m1, m2) =>
+                              new Date(m2.date).getTime() -
+                              new Date(m1.date).getTime()
+                          );
+
+                        const bDeckMatches = tournament.matches
+                          .filter(
+                            (match) =>
+                              match.deckA.id === b.deckId ||
+                              match.deckB.id === b.deckId
+                          )
+                          .sort(
+                            (m1, m2) =>
+                              new Date(m2.date).getTime() -
+                              new Date(m1.date).getTime()
+                          );
+
+                        // Deck with later final match gets better placement (lower index)
+                        const aLastMatch = aDeckMatches[0]?.date;
+                        const bLastMatch = bDeckMatches[0]?.date;
+
+                        if (aLastMatch && bLastMatch) {
+                          return (
+                            new Date(bLastMatch).getTime() -
+                            new Date(aLastMatch).getTime()
+                          );
+                        }
+                      }
+                      return 0; // No change if not tied or no match data
+                    })
                     .map((deckStat, index) => {
                       const totalGames =
                         deckStat.wins + deckStat.losses + deckStat.ties;

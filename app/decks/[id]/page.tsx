@@ -22,6 +22,7 @@ import {
   TableRow,
 } from "@heroui/table";
 import { User } from "@heroui/user";
+import "@/lib/extensions/array";
 
 export default function ViewDeckPage() {
   const { id } = useParams();
@@ -289,13 +290,10 @@ export default function ViewDeckPage() {
               </TableHeader>
               <TableBody>
                 {Array.from(matchupStats.entries())
-                  .sort(([, a], [, b]) => {
-                    const aTotal = a.wins + a.losses + a.ties;
-                    const bTotal = b.wins + b.losses + b.ties;
-                    const aWinRate = aTotal > 0 ? (a.wins / aTotal) * 100 : 0;
-                    const bWinRate = bTotal > 0 ? (b.wins / bTotal) * 100 : 0;
-                    return bWinRate - aWinRate; // Sort by win rate descending
-                  })
+                  .sortByWinsAndLosses(
+                    (stats) => stats[1].wins,
+                    (stats) => stats[1].losses
+                  )
                   .map(([key, stats]) => {
                     const total = stats.wins + stats.losses + stats.ties;
                     const winRate =
