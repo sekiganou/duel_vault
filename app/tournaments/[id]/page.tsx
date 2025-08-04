@@ -3,7 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getTournamentById } from "@/lib/api/tournaments";
-import { TournamentWithRelations } from "@/types";
+import { CardTabItem, TournamentWithRelations } from "@/types";
 import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Chip } from "@heroui/chip";
 import { Spinner } from "@heroui/spinner";
@@ -28,6 +28,8 @@ import {
 } from "@heroui/table";
 import { User } from "@heroui/user";
 import "@/lib/extensions/array";
+import { CustomScrollShadow } from "@/components/customScrollShadow";
+import { CardTabs } from "@/components/cardTabs";
 
 const getTournamentStatus = (tournament: TournamentWithRelations): string => {
   const now = new Date();
@@ -147,6 +149,222 @@ export default function ViewTournamentPage() {
     );
     durationText = `Duration: ${duration} day${duration !== 1 ? "s" : ""}`;
   }
+
+  const tabs: CardTabItem[] = [
+    {
+      title: "Rankings",
+      key: "rankings",
+      emptyContent: {
+        header: "No Rankings Available",
+        text: "This tournament has no rankings yet.",
+        icon: (props) => <IconTrophy {...props} />,
+        displayEmptyContent: tournament.deckStats.length === 0,
+      },
+      cardBody: (
+        <Table aria-label="Tournament Rankings">
+          <TableHeader>
+            <TableColumn>RANK</TableColumn>
+            <TableColumn>DECK</TableColumn>
+            <TableColumn>ARCHETYPE</TableColumn>
+            <TableColumn>WINS</TableColumn>
+            <TableColumn>LOSSES</TableColumn>
+            <TableColumn>TIES</TableColumn>
+            <TableColumn>WIN RATE</TableColumn>
+          </TableHeader>
+          <TableBody>
+            {tournament.deckStats
+              .sortByWinsAndLosses(
+                (deckStat) => deckStat.wins,
+                (deckStat) => deckStat.losses
+              )
+              .sort((a, b) => {
+                // If wins and losses are the same, use last match date as tiebreaker
+                if (a.wins === b.wins && a.losses === b.losses) {
+                  // Find each deck's last match (their elimination match or final match)
+                  const aDeckMatches = tournament.matches
+                    .filter(
+                      (match) =>
+                        match.deckA.id === a.deckId ||
+                        match.deckB.id === a.deckId
+                    )
+                    .sort(
+                      (m1, m2) =>
+                        new Date(m2.date).getTime() -
+                        new Date(m1.date).getTime()
+                    );
+
+                  const bDeckMatches = tournament.matches
+                    .filter(
+                      (match) =>
+                        match.deckA.id === b.deckId ||
+                        match.deckB.id === b.deckId
+                    )
+                    .sort(
+                      (m1, m2) =>
+                        new Date(m2.date).getTime() -
+                        new Date(m1.date).getTime()
+                    );
+
+                  // Deck with later final match gets better placement (lower index)
+                  const aLastMatch = aDeckMatches[0]?.date;
+                  const bLastMatch = bDeckMatches[0]?.date;
+
+                  if (aLastMatch && bLastMatch) {
+                    return (
+                      new Date(bLastMatch).getTime() -
+                      new Date(aLastMatch).getTime()
+                    );
+                  }
+                }
+                return 0; // No change if not tied or no match data
+              })
+              .map((deckStat, index) => {
+                const totalGames =
+                  deckStat.wins + deckStat.losses + deckStat.ties;
+                const winRate =
+                  totalGames > 0
+                    ? ((deckStat.wins / totalGames) * 100).toFixed(1)
+                    : "0";
+                const finalRank = index + 1;
+
+                return (
+                  <TableRow key={deckStat.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {finalRank === 1 && (
+                          <span className="text-yellow-500">🥇</span>
+                        )}
+                        {finalRank === 2 && (
+                          <span className="text-gray-400">🥈</span>
+                        )}
+                        {finalRank === 3 && (
+                          <span className="text-orange-600">🥉</span>
+                        )}
+                        {finalRank > 3 && (
+                          <span className="text-default-400">🔹</span>
+                        )}
+                        <span className="font-semibold">#{finalRank}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <User
+                        name={deckStat.deck.name}
+                        description={deckStat.deck.format.name}
+                        avatarProps={{
+                          src: deckStat.deck.avatar || undefined,
+                          size: "sm",
+                          radius: "lg",
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell>{deckStat.deck.archetype.name}</TableCell>
+                    <TableCell>
+                      <span className="text-success font-semibold">
+                        {deckStat.wins}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-danger font-semibold">
+                        {deckStat.losses}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-warning font-semibold">
+                        {deckStat.ties}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-semibold">{winRate}%</span>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+          </TableBody>
+        </Table>
+      ),
+    },
+    {
+      title: "Matches",
+      key: "matches",
+      emptyContent: {
+        header: "No Matches Played",
+        text: "This tournament has no matches yet.",
+        icon: (props) => <IconSwords {...props} />,
+        displayEmptyContent: tournament.matches.length === 0,
+      },
+      cardBody: (
+        <Table aria-label="Tournament Matches">
+          <TableHeader>
+            <TableColumn>DATE</TableColumn>
+            <TableColumn>DECK A</TableColumn>
+            <TableColumn>DECK B</TableColumn>
+            <TableColumn>SCORE</TableColumn>
+            <TableColumn>WINNER</TableColumn>
+          </TableHeader>
+          <TableBody>
+            {tournament.matches
+              .sort(
+                (a, b) =>
+                  new Date(b.date).getTime() - new Date(a.date).getTime()
+              )
+              .map((match) => (
+                <TableRow key={match.id}>
+                  <TableCell>
+                    <span className="text-small">
+                      {new Date(match.date).toLocaleDateString()}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <User
+                      name={match.deckA.name}
+                      description={match.deckA.archetype.name}
+                      className="shrink-0"
+                      avatarProps={{
+                        src: match.deckA.avatar || undefined,
+                        size: "sm",
+                        radius: "lg",
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <User
+                      name={match.deckB.name}
+                      description={match.deckB.archetype.name}
+                      className="shrink-0"
+                      avatarProps={{
+                        src: match.deckB.avatar || undefined,
+                        size: "sm",
+                        radius: "lg",
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <span className="font-mono">
+                      {match.deckAScore} - {match.deckBScore}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    {match.winner ? (
+                      match.winner.id === match.deckA.id ? (
+                        <span className="text-success font-semibold">
+                          {match.deckA.name}
+                        </span>
+                      ) : (
+                        <span className="text-danger font-semibold">
+                          {match.deckB.name}
+                        </span>
+                      )
+                    ) : (
+                      <span className="text-warning font-semibold">Tie</span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+          </TableBody>
+        </Table>
+      ),
+    },
+  ];
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -290,233 +508,7 @@ export default function ViewTournamentPage() {
 
       <Divider className="my-8" />
 
-      {/* Tournament Rankings */}
-      {tournament.deckStats.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold mb-4">Tournament Rankings</h2>
-          <Card>
-            <CardBody>
-              <Table aria-label="Tournament Rankings">
-                <TableHeader>
-                  <TableColumn>RANK</TableColumn>
-                  <TableColumn>DECK</TableColumn>
-                  <TableColumn>ARCHETYPE</TableColumn>
-                  <TableColumn>WINS</TableColumn>
-                  <TableColumn>LOSSES</TableColumn>
-                  <TableColumn>TIES</TableColumn>
-                  <TableColumn>WIN RATE</TableColumn>
-                </TableHeader>
-                <TableBody>
-                  {tournament.deckStats
-                    .sortByWinsAndLosses(
-                      (deckStat) => deckStat.wins,
-                      (deckStat) => deckStat.losses
-                    )
-                    .sort((a, b) => {
-                      // If wins and losses are the same, use last match date as tiebreaker
-                      if (a.wins === b.wins && a.losses === b.losses) {
-                        // Find each deck's last match (their elimination match or final match)
-                        const aDeckMatches = tournament.matches
-                          .filter(
-                            (match) =>
-                              match.deckA.id === a.deckId ||
-                              match.deckB.id === a.deckId
-                          )
-                          .sort(
-                            (m1, m2) =>
-                              new Date(m2.date).getTime() -
-                              new Date(m1.date).getTime()
-                          );
-
-                        const bDeckMatches = tournament.matches
-                          .filter(
-                            (match) =>
-                              match.deckA.id === b.deckId ||
-                              match.deckB.id === b.deckId
-                          )
-                          .sort(
-                            (m1, m2) =>
-                              new Date(m2.date).getTime() -
-                              new Date(m1.date).getTime()
-                          );
-
-                        // Deck with later final match gets better placement (lower index)
-                        const aLastMatch = aDeckMatches[0]?.date;
-                        const bLastMatch = bDeckMatches[0]?.date;
-
-                        if (aLastMatch && bLastMatch) {
-                          return (
-                            new Date(bLastMatch).getTime() -
-                            new Date(aLastMatch).getTime()
-                          );
-                        }
-                      }
-                      return 0; // No change if not tied or no match data
-                    })
-                    .map((deckStat, index) => {
-                      const totalGames =
-                        deckStat.wins + deckStat.losses + deckStat.ties;
-                      const winRate =
-                        totalGames > 0
-                          ? ((deckStat.wins / totalGames) * 100).toFixed(1)
-                          : "0";
-                      const finalRank = index + 1;
-
-                      return (
-                        <TableRow key={deckStat.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              {finalRank === 1 && (
-                                <span className="text-yellow-500">🥇</span>
-                              )}
-                              {finalRank === 2 && (
-                                <span className="text-gray-400">🥈</span>
-                              )}
-                              {finalRank === 3 && (
-                                <span className="text-orange-600">🥉</span>
-                              )}
-                              {finalRank > 3 && (
-                                <span className="text-default-400">🔹</span>
-                              )}
-                              <span className="font-semibold">
-                                #{finalRank}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <User
-                              name={deckStat.deck.name}
-                              description={deckStat.deck.format.name}
-                              avatarProps={{
-                                src: deckStat.deck.avatar || undefined,
-                                size: "sm",
-                                radius: "lg",
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>{deckStat.deck.archetype.name}</TableCell>
-                          <TableCell>
-                            <span className="text-success font-semibold">
-                              {deckStat.wins}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-danger font-semibold">
-                              {deckStat.losses}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-warning font-semibold">
-                              {deckStat.ties}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <span className="font-semibold">{winRate}%</span>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                </TableBody>
-              </Table>
-            </CardBody>
-          </Card>
-        </div>
-      )}
-
-      {/* Tournament Matches */}
-      {tournament.matches.length > 0 && (
-        <div>
-          <h2 className="text-2xl font-bold mb-4">Tournament Matches</h2>
-          <Card>
-            <CardBody>
-              <Table aria-label="Tournament Matches">
-                <TableHeader>
-                  <TableColumn>DATE</TableColumn>
-                  <TableColumn>DECK A</TableColumn>
-                  <TableColumn>DECK B</TableColumn>
-                  <TableColumn>SCORE</TableColumn>
-                  <TableColumn>WINNER</TableColumn>
-                </TableHeader>
-                <TableBody>
-                  {tournament.matches
-                    .sort(
-                      (a, b) =>
-                        new Date(b.date).getTime() - new Date(a.date).getTime()
-                    )
-                    .map((match) => (
-                      <TableRow key={match.id}>
-                        <TableCell>
-                          <span className="text-small">
-                            {new Date(match.date).toLocaleDateString()}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <User
-                            name={match.deckA.name}
-                            description={match.deckA.archetype.name}
-                            className="shrink-0"
-                            avatarProps={{
-                              src: match.deckA.avatar || undefined,
-                              size: "sm",
-                              radius: "lg",
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <User
-                            name={match.deckB.name}
-                            description={match.deckB.archetype.name}
-                            className="shrink-0"
-                            avatarProps={{
-                              src: match.deckB.avatar || undefined,
-                              size: "sm",
-                              radius: "lg",
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-mono">
-                            {match.deckAScore} - {match.deckBScore}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          {match.winner ? (
-                            match.winner.id === match.deckA.id ? (
-                              <span className="text-success font-semibold">
-                                {match.deckA.name}
-                              </span>
-                            ) : (
-                              <span className="text-danger font-semibold">
-                                {match.deckB.name}
-                              </span>
-                            )
-                          ) : (
-                            <span className="text-warning font-semibold">
-                              Tie
-                            </span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
-            </CardBody>
-          </Card>
-        </div>
-      )}
-
-      {/* Empty States */}
-      {tournament.deckStats.length === 0 && tournament.matches.length === 0 && (
-        <div className="text-center py-12">
-          <IconTrophy size={48} className="text-default-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-default-500 mb-2">
-            No Tournament Data
-          </h3>
-          <p className="text-default-400">
-            This tournament doesn't have any matches or rankings yet.
-          </p>
-        </div>
-      )}
+      <CardTabs tabs={tabs} />
     </div>
   );
 }
