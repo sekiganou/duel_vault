@@ -36,6 +36,7 @@ export default function RootLayout({
     <html suppressHydrationWarning lang="en">
       <head>
         <meta name="apple-mobile-web-app-title" content="Duel Vault" />
+        <link rel="apple-touch-icon" sizes="any" href="/logo-dark.png" />
       </head>
       <body
         className={clsx(

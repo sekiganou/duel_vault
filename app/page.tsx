@@ -26,6 +26,7 @@ import { Skeleton } from "@heroui/skeleton";
 import { getAllTournaments } from "@/lib/api/tournaments";
 import { Image } from "@heroui/image";
 import { useTheme } from "next-themes";
+import "@/lib/extensions/array";
 
 export default function Home() {
   const [decks, setDecks] = useState<DeckWithRelations[]>([]);
@@ -289,11 +290,16 @@ export default function Home() {
           <CardBody className="gap-3">
             {decks
               .filter((deck) => deck.wins + deck.losses + deck.ties > 0)
-              .sort((a, b) => {
-                const aRate = a.wins / (a.wins + a.losses + a.ties);
-                const bRate = b.wins / (b.wins + b.losses + b.ties);
-                return bRate - aRate;
-              })
+              .sortByWinsAndLosses(
+                (deck) => deck.wins,
+                (deck) => deck.losses
+              )
+              // .sort((a, b) => {
+              //   if (b.wins !== a.wins) {
+              //     return b.wins - a.wins;
+              //   }
+              //   return a.losses - b.losses;
+              // })
               .slice(0, 5)
               .map((deck) => {
                 const deckWinRate = Math.round(
@@ -386,7 +392,7 @@ export default function Home() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-col sm:flex-row">
                     <Chip size="sm" variant="flat" color="primary">
                       {tournament.deckStats.length} Participants
                     </Chip>
