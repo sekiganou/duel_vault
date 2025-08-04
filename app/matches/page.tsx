@@ -6,6 +6,7 @@ import {
   getAllMatches,
   deleteMatch,
   getMatchStatus,
+  statusColorMap,
 } from "@/lib/api/matches";
 import { getAllDecks } from "@/lib/api/decks";
 import {
@@ -41,6 +42,7 @@ import { Input } from "@heroui/input";
 import { User } from "@heroui/user";
 import { getAllTournaments } from "@/lib/api/tournaments";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const columns: TableColumnDescriptor[] = [
   { name: "ID", uid: "id", sortable: true },
@@ -67,11 +69,6 @@ const statusOptions: StatusOptionDescriptor[] = [
   { name: "Tournament Matches", uid: "tournament" },
   { name: "Friendly Matches", uid: "friendly" },
 ];
-
-const statusColorMap: Record<string, ChipProps["color"]> = {
-  tournament: "primary",
-  friendly: "secondary",
-};
 
 const DeleteModal = ({
   isOpen,
@@ -372,6 +369,7 @@ export default function MatchesPage() {
   const [selectedMatch, setSelectedMatch] = useState<MatchWithRelations | null>(
     null
   );
+  const router = useRouter();
 
   const {
     isOpen: isOpenCreateModal,
@@ -493,6 +491,12 @@ export default function MatchesPage() {
                   </Button>
                 </DropdownTrigger>
                 <DropdownMenu>
+                  <DropdownItem
+                    key="view"
+                    onPress={() => router.push(`/matches/${match.id}`)}
+                  >
+                    View
+                  </DropdownItem>
                   <DropdownItem
                     key="edit"
                     onPress={() => {

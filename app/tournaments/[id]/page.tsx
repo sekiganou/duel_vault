@@ -3,7 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getTournamentById } from "@/lib/api/tournaments";
-import { TournamentWithRelations } from "@/types";
+import { CardTabItem, TournamentWithRelations } from "@/types";
 import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Chip } from "@heroui/chip";
 import { Spinner } from "@heroui/spinner";
@@ -15,6 +15,8 @@ import {
   IconLink,
   IconTrophy,
   IconSwords,
+  IconGraph,
+  IconEye,
 } from "@tabler/icons-react";
 import { Button } from "@heroui/button";
 import { capitalize } from "@/components/fullTable";
@@ -28,6 +30,8 @@ import {
 } from "@heroui/table";
 import { User } from "@heroui/user";
 import "@/lib/extensions/array";
+import { CustomScrollShadow } from "@/components/customScrollShadow";
+import { CardTabs } from "@/components/cardTabs";
 
 const getTournamentStatus = (tournament: TournamentWithRelations): string => {
   const now = new Date();
@@ -64,6 +68,20 @@ export default function ViewTournamentPage() {
       })
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (tournament) {
+      const tournamentDetailsHeading = document.getElementById(
+        "tournament-details-heading"
+      );
+      if (tournamentDetailsHeading) {
+        tournamentDetailsHeading.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }
+    }
+  }, [tournament]);
 
   if (loading) {
     return (
@@ -155,7 +173,7 @@ export default function ViewTournamentPage() {
         <Button isIconOnly variant="light" onPress={() => router.back()}>
           <IconChevronLeft />
         </Button>
-        <div className="flex-1">
+        <div className="flex-1" id="tournament-details-heading">
           <h1 className="text-3xl font-bold">{tournament.name}</h1>
           <div className="flex items-center gap-2 mt-1">
             <Chip color={statusColorMap[status]} size="sm" variant="flat">
@@ -175,7 +193,7 @@ export default function ViewTournamentPage() {
           <CardHeader className="flex gap-3">
             <IconTrophy className="text-primary" size={24} />
             <div className="flex flex-col">
-              <p className="text-md font-semibold">Tournament Details</p>
+              <p className="text-md font-semibold">Tournament Information</p>
             </div>
           </CardHeader>
           <CardBody className="space-y-4">
@@ -255,8 +273,9 @@ export default function ViewTournamentPage() {
         {/* Tournament Stats */}
         <Card>
           <CardHeader>
-            <div className="flex flex-col">
-              <p className="text-md font-semibold">Tournament Stats</p>
+            <div className="flex items-center gap-3">
+              <IconGraph className="text-primary" size={24} />
+              <p className="text-md font-semibold">Tournament Statistics</p>
             </div>
           </CardHeader>
           <CardBody className="space-y-3">
@@ -290,12 +309,18 @@ export default function ViewTournamentPage() {
 
       <Divider className="my-8" />
 
-      {/* Tournament Rankings */}
-      {tournament.deckStats.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold mb-4">Tournament Rankings</h2>
-          <Card>
-            <CardBody>
+      <CardTabs
+        tabs={[
+          {
+            title: "Rankings",
+            key: "rankings",
+            emptyContent: {
+              header: "No Rankings Available",
+              text: "This tournament has no rankings yet.",
+              icon: (props) => <IconTrophy {...props} />,
+              displayEmptyContent: tournament.deckStats.length === 0,
+            },
+            cardBody: (
               <Table aria-label="Tournament Rankings">
                 <TableHeader>
                   <TableColumn>RANK</TableColumn>
@@ -305,6 +330,7 @@ export default function ViewTournamentPage() {
                   <TableColumn>LOSSES</TableColumn>
                   <TableColumn>TIES</TableColumn>
                   <TableColumn>WIN RATE</TableColumn>
+                  <TableColumn>ACTION</TableColumn>
                 </TableHeader>
                 <TableBody>
                   {tournament.deckStats
@@ -413,22 +439,35 @@ export default function ViewTournamentPage() {
                           <TableCell>
                             <span className="font-semibold">{winRate}%</span>
                           </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="light"
+                              size="sm"
+                              onPress={() =>
+                                router.push(`/decks/${deckStat.deckId}`)
+                              }
+                              aria-label={`View deck ${deckStat.deck.name}`}
+                            >
+                              View
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       );
                     })}
                 </TableBody>
               </Table>
-            </CardBody>
-          </Card>
-        </div>
-      )}
-
-      {/* Tournament Matches */}
-      {tournament.matches.length > 0 && (
-        <div>
-          <h2 className="text-2xl font-bold mb-4">Tournament Matches</h2>
-          <Card>
-            <CardBody>
+            ),
+          },
+          {
+            title: "Matches",
+            key: "matches",
+            emptyContent: {
+              header: "No Matches Played",
+              text: "This tournament has no matches yet.",
+              icon: (props) => <IconSwords {...props} />,
+              displayEmptyContent: tournament.matches.length === 0,
+            },
+            cardBody: (
               <Table aria-label="Tournament Matches">
                 <TableHeader>
                   <TableColumn>DATE</TableColumn>
@@ -436,6 +475,7 @@ export default function ViewTournamentPage() {
                   <TableColumn>DECK B</TableColumn>
                   <TableColumn>SCORE</TableColumn>
                   <TableColumn>WINNER</TableColumn>
+                  <TableColumn>ACTION</TableColumn>
                 </TableHeader>
                 <TableBody>
                   {tournament.matches
@@ -496,27 +536,25 @@ export default function ViewTournamentPage() {
                             </span>
                           )}
                         </TableCell>
+                        <TableCell>
+                          <Button
+                            // isIconOnly
+                            variant="light"
+                            size="sm"
+                            onPress={() => router.push(`/matches/${match.id}`)}
+                            aria-label={`View match ${match.id}`}
+                          >
+                            View
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                 </TableBody>
               </Table>
-            </CardBody>
-          </Card>
-        </div>
-      )}
-
-      {/* Empty States */}
-      {tournament.deckStats.length === 0 && tournament.matches.length === 0 && (
-        <div className="text-center py-12">
-          <IconTrophy size={48} className="text-default-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-default-500 mb-2">
-            No Tournament Data
-          </h3>
-          <p className="text-default-400">
-            This tournament doesn't have any matches or rankings yet.
-          </p>
-        </div>
-      )}
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

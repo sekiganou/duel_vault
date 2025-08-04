@@ -89,3 +89,16 @@ export type TournamentWithRelations = Tournament & {
     deck: DeckWithRelations;
   })[];
 };
+
+export type CardTabItem = {
+  key: string;
+  maxCardHeightPx?: number;
+  title: string;
+  cardBody: React.ReactNode;
+  emptyContent?: {
+    header: string;
+    text: string;
+    icon: React.ComponentType<{ size?: number; className?: string }>;
+    displayEmptyContent: boolean;
+  };
+};
