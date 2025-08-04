@@ -15,6 +15,8 @@ import {
   IconLink,
   IconTrophy,
   IconSwords,
+  IconGraph,
+  IconEye,
 } from "@tabler/icons-react";
 import { Button } from "@heroui/button";
 import { capitalize } from "@/components/fullTable";
@@ -66,6 +68,20 @@ export default function ViewTournamentPage() {
       })
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (tournament) {
+      const tournamentDetailsHeading = document.getElementById(
+        "tournament-details-heading"
+      );
+      if (tournamentDetailsHeading) {
+        tournamentDetailsHeading.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }
+    }
+  }, [tournament]);
 
   if (loading) {
     return (
@@ -157,7 +173,7 @@ export default function ViewTournamentPage() {
         <Button isIconOnly variant="light" onPress={() => router.back()}>
           <IconChevronLeft />
         </Button>
-        <div className="flex-1">
+        <div className="flex-1" id="tournament-details-heading">
           <h1 className="text-3xl font-bold">{tournament.name}</h1>
           <div className="flex items-center gap-2 mt-1">
             <Chip color={statusColorMap[status]} size="sm" variant="flat">
@@ -177,7 +193,7 @@ export default function ViewTournamentPage() {
           <CardHeader className="flex gap-3">
             <IconTrophy className="text-primary" size={24} />
             <div className="flex flex-col">
-              <p className="text-md font-semibold">Tournament Details</p>
+              <p className="text-md font-semibold">Tournament Information</p>
             </div>
           </CardHeader>
           <CardBody className="space-y-4">
@@ -257,8 +273,9 @@ export default function ViewTournamentPage() {
         {/* Tournament Stats */}
         <Card>
           <CardHeader>
-            <div className="flex flex-col">
-              <p className="text-md font-semibold">Tournament Stats</p>
+            <div className="flex items-center gap-3">
+              <IconGraph className="text-primary" size={24} />
+              <p className="text-md font-semibold">Tournament Statistics</p>
             </div>
           </CardHeader>
           <CardBody className="space-y-3">
@@ -313,6 +330,7 @@ export default function ViewTournamentPage() {
                   <TableColumn>LOSSES</TableColumn>
                   <TableColumn>TIES</TableColumn>
                   <TableColumn>WIN RATE</TableColumn>
+                  <TableColumn>ACTION</TableColumn>
                 </TableHeader>
                 <TableBody>
                   {tournament.deckStats
@@ -421,6 +439,18 @@ export default function ViewTournamentPage() {
                           <TableCell>
                             <span className="font-semibold">{winRate}%</span>
                           </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="light"
+                              size="sm"
+                              onPress={() =>
+                                router.push(`/decks/${deckStat.deckId}`)
+                              }
+                              aria-label={`View deck ${deckStat.deck.name}`}
+                            >
+                              View
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       );
                     })}
@@ -445,6 +475,7 @@ export default function ViewTournamentPage() {
                   <TableColumn>DECK B</TableColumn>
                   <TableColumn>SCORE</TableColumn>
                   <TableColumn>WINNER</TableColumn>
+                  <TableColumn>ACTION</TableColumn>
                 </TableHeader>
                 <TableBody>
                   {tournament.matches
@@ -504,6 +535,17 @@ export default function ViewTournamentPage() {
                               Tie
                             </span>
                           )}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            // isIconOnly
+                            variant="light"
+                            size="sm"
+                            onPress={() => router.push(`/matches/${match.id}`)}
+                            aria-label={`View match ${match.id}`}
+                          >
+                            View
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}

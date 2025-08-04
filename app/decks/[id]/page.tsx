@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getDeckById, getDeckStatus, statusColorMap } from "@/lib/api/decks";
 import { CardTabItem, DeckWithRelations } from "@/types";
@@ -11,7 +11,9 @@ import { Spinner } from "@heroui/spinner";
 import { Divider } from "@heroui/divider";
 import { Image } from "@heroui/image";
 import {
+  IconCards,
   IconChevronLeft,
+  IconGraph,
   IconRefresh,
   IconSword,
   IconSwords,
@@ -40,6 +42,7 @@ export default function ViewDeckPage() {
   const [deck, setDeck] = useState<DeckWithRelations | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     setLoading(true);
@@ -47,8 +50,6 @@ export default function ViewDeckPage() {
       .then(setDeck)
       .finally(() => setLoading(false));
   }, [id]);
-
-  console.log("Deck data:", deck);
 
   useEffect(() => {
     if (deck) {
@@ -121,6 +122,7 @@ export default function ViewDeckPage() {
   const matchupStats = new Map<
     string,
     {
+      deckId: number;
       wins: number;
       losses: number;
       ties: number;
@@ -136,6 +138,7 @@ export default function ViewDeckPage() {
 
     if (!matchupStats.has(key)) {
       matchupStats.set(key, {
+        deckId: opponentDeck.id,
         wins: 0,
         losses: 0,
         ties: 0,
@@ -215,41 +218,10 @@ export default function ViewDeckPage() {
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Match Statistics */}
-        <Card>
-          <CardHeader>
-            <h2 className="text-xl font-semibold">Match Statistics</h2>
-          </CardHeader>
-          <CardBody>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span>Win Rate:</span>
-                <span className="font-semibold text-success">{winRate}%</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Wins:</span>
-                <span className="font-semibold text-success">{deck.wins}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Losses:</span>
-                <span className="font-semibold text-danger">{deck.losses}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Ties:</span>
-                <span className="font-semibold text-warning">{deck.ties}</span>
-              </div>
-              <Divider />
-              <div className="flex justify-between">
-                <span>Total Matches:</span>
-                <span className="font-semibold">{totalMatches}</span>
-              </div>
-            </div>
-          </CardBody>
-        </Card>
-
         {/* Deck Information */}
         <Card>
-          <CardHeader>
+          <CardHeader className="flex items-center gap-2">
+            <IconCards className="text-primary" />
             <h2 className="text-xl font-semibold">Deck Information</h2>
           </CardHeader>
           <CardBody>
@@ -279,6 +251,39 @@ export default function ViewDeckPage() {
             </div>
           </CardBody>
         </Card>
+
+        {/* Match Statistics */}
+        <Card>
+          <CardHeader className="flex items-center gap-2">
+            <IconGraph className="text-primary" />
+            <h2 className="text-xl font-semibold">Match Statistics</h2>
+          </CardHeader>
+          <CardBody>
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span>Win Rate:</span>
+                <span className="font-semibold text-success">{winRate}%</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Wins:</span>
+                <span className="font-semibold text-success">{deck.wins}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Losses:</span>
+                <span className="font-semibold text-danger">{deck.losses}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Ties:</span>
+                <span className="font-semibold text-warning">{deck.ties}</span>
+              </div>
+              <Divider />
+              <div className="flex justify-between">
+                <span>Total Matches:</span>
+                <span className="font-semibold">{totalMatches}</span>
+              </div>
+            </div>
+          </CardBody>
+        </Card>
       </div>
 
       <Divider className="my-8" />
@@ -287,7 +292,7 @@ export default function ViewDeckPage() {
         tabs={[
           {
             key: "matchup-statistics",
-            title: "Matchup Statistics",
+            title: "Matchups",
             emptyContent: {
               header: "No Matchup Data",
               text: "This deck has not played any matches yet.",
@@ -302,6 +307,7 @@ export default function ViewDeckPage() {
                   <TableColumn>LOSSES</TableColumn>
                   <TableColumn>TIES</TableColumn>
                   <TableColumn>WIN RATE</TableColumn>
+                  <TableColumn>ACTION</TableColumn>
                 </TableHeader>
                 <TableBody>
                   {Array.from(matchupStats.entries())
@@ -359,6 +365,17 @@ export default function ViewDeckPage() {
                               {winRate}%
                             </Chip>
                           </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="light"
+                              size="sm"
+                              onPress={() =>
+                                router.push(`/decks/${stats.deckId}`)
+                              }
+                            >
+                              View
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       );
                     })}
@@ -368,7 +385,7 @@ export default function ViewDeckPage() {
           },
           {
             key: "tournament-performance",
-            title: "Tournament Performance",
+            title: "Tournaments",
             emptyContent: {
               header: "No Tournament Data",
               text: "This deck hasn't participated in any tournaments yet.",
@@ -384,6 +401,7 @@ export default function ViewDeckPage() {
                   <TableColumn>LOSSES</TableColumn>
                   <TableColumn>TIES</TableColumn>
                   <TableColumn>WIN RATE</TableColumn>
+                  <TableColumn>ACTION</TableColumn>
                 </TableHeader>
                 <TableBody>
                   {deck.tournamentStats
@@ -446,6 +464,19 @@ export default function ViewDeckPage() {
                             >
                               {winRate}%
                             </Chip>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="light"
+                              size="sm"
+                              onPress={() =>
+                                router.push(
+                                  `/tournaments/${stat.tournament?.id}`
+                                )
+                              }
+                            >
+                              View
+                            </Button>
                           </TableCell>
                         </TableRow>
                       );

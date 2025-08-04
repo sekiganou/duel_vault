@@ -7,13 +7,70 @@ import { getAvatarUrl } from "./avatarCache";
 
 const basePath = "/api/matches";
 
+export const statusColorMap: Record<string, "primary" | "secondary"> = {
+  tournament: "primary",
+  friendly: "secondary",
+};
+
 export function getMatchStatus(match: MatchWithRelations): string {
   return match.tournament ? "tournament" : "friendly";
+}
+
+export async function getMatchById(id: number): Promise<MatchWithRelations> {
+  const res = await axios.get(`${basePath}/${id}`);
+  const match: MatchWithRelations = res.data;
+
+  if (match.deckA.avatar) {
+    const presignedUrl = await getAvatarUrl(match.deckA.avatar);
+    if (presignedUrl) {
+      match.deckA.avatar = presignedUrl;
+    }
+  }
+  if (match.deckB.avatar) {
+    const presignedUrl = await getAvatarUrl(match.deckB.avatar);
+    if (presignedUrl) {
+      match.deckB.avatar = presignedUrl;
+    }
+  }
+
+  return match;
 }
 
 export async function getAllMatches(): Promise<MatchWithRelations[]> {
   const res = await axios.get(basePath);
   const matches: MatchWithRelations[] = res.data;
+  await Promise.all(
+    matches.map(async (match) => {
+      if (match.deckA.avatar) {
+        const presignedUrl = await getAvatarUrl(match.deckA.avatar);
+        if (presignedUrl) {
+          match.deckA.avatar = presignedUrl;
+        }
+      }
+      if (match.deckB.avatar) {
+        const presignedUrl = await getAvatarUrl(match.deckB.avatar);
+        if (presignedUrl) {
+          match.deckB.avatar = presignedUrl;
+        }
+      }
+    })
+  );
+
+  return matches;
+}
+
+export async function getMatchesByDeckId(
+  deckAId: number,
+  deckBId: number | null
+) {
+  const res = await axios.get(
+    `${basePath}/by-deck?deckAId=${deckAId}&deckBId=${deckBId}`,
+    {
+      params: { deckAId, deckBId },
+    }
+  );
+  const matches: MatchWithRelations[] = res.data;
+
   await Promise.all(
     matches.map(async (match) => {
       if (match.deckA.avatar) {
