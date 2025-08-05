@@ -19,19 +19,20 @@ services:
       - "9000:9000"
       - "9001:9001"
 
-  web:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-    image: gitea.dojo-vernier.ts.net/duelvault:dev
-    depends_on:
-      - db
-      - s3
-    ports:
-      - "3000:3000"
-    env_file: ".env.local"
-    volumes:
-      - .:/app
+#  web:
+#    build:
+#      context: .
+#      dockerfile: Dockerfile.dev
+#    restart: always
+#    image: gitea.dojo-vernier.ts.net/duelvault:dev
+#    depends_on:
+#      - db
+#      - s3
+#    ports:
+#      - "3000:3000"
+#    env_file: ".env.local"
+#    volumes:
+#      - .:/app
 
 volumes:
   db_data:
