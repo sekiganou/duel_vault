@@ -31,11 +31,7 @@ import {
 } from "@heroui/table";
 import { User } from "@heroui/user";
 import "@/lib/extensions/array";
-import { ScrollShadow } from "@heroui/scroll-shadow";
-import { Tab, Tabs } from "@heroui/tabs";
-import { useTheme } from "next-themes";
 import { CardTabs } from "@/components/cardTabs";
-import { CustomScrollShadow } from "@/components/customScrollShadow";
 
 export default function ViewDeckPage() {
   const { id } = useParams();
@@ -184,7 +180,7 @@ export default function ViewDeckPage() {
                 alt={`${deck.name} avatar`}
                 radius="lg"
                 className="w-20 h-20 text-large"
-                // className="w-24 h-24 object-cover rounded-lg"
+              // className="w-24 h-24 object-cover rounded-lg"
               />
             )}
             <div className="flex-1">
@@ -430,8 +426,8 @@ export default function ViewDeckPage() {
                             <span className="text-small">
                               {stat.tournament?.startDate
                                 ? new Date(
-                                    stat.tournament.startDate
-                                  ).toLocaleDateString()
+                                  stat.tournament.startDate
+                                ).toLocaleDateString()
                                 : "Unknown Date"}
                             </span>
                           </TableCell>

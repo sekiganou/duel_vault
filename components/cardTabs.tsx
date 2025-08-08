@@ -1,7 +1,7 @@
 import { CardTabItem } from "@/types";
 import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Tabs, Tab } from "@heroui/tabs";
-import { CustomScrollShadow } from "./customScrollShadow";
+import { ScrollShadow } from "@heroui/scroll-shadow";
 
 interface CustomTabsProps {
   tabs: CardTabItem[];
@@ -14,18 +14,18 @@ export const CardTabs = ({ tabs, className }: CustomTabsProps) => {
   }: {
     emptyContent: CardTabItem["emptyContent"];
   }) =>
-    emptyContent?.displayEmptyContent ? (
-      <div className="flex flex-col items-center">
-        <emptyContent.icon
-          size={48}
-          className="text-default-300 mx-auto mb-4"
-        />
-        <h3 className="text-lg font-semibold text-default-500 mb-2">
-          {emptyContent.header}
-        </h3>
-        <p className="text-default-400">{emptyContent.text}</p>
-      </div>
-    ) : null;
+  (
+    <div className="flex flex-col items-center">
+      <emptyContent.icon
+        size={48}
+        className="text-default-300 mx-auto mb-4"
+      />
+      <h3 className="text-lg font-semibold text-default-500 mb-2">
+        {emptyContent.header}
+      </h3>
+      <p className="text-default-400">{emptyContent.text}</p>
+    </div>
+  );
 
   return (
     <Tabs
@@ -44,12 +44,12 @@ export const CardTabs = ({ tabs, className }: CustomTabsProps) => {
               <h2 className="text-xl font-semibold">{tab.title}</h2>
             </CardHeader>
             <CardBody>
-              {tab.emptyContent?.displayEmptyContent ? (
+              {tab.emptyContent.displayEmptyContent ? (
                 <EmptyContent emptyContent={tab.emptyContent} />
               ) : (
-                <CustomScrollShadow maxHeightPx={tab.maxCardHeightPx}>
+                <ScrollShadow className="max-h-[400px]">
                   {tab.cardBody}
-                </CustomScrollShadow>
+                </ScrollShadow>
               )}
             </CardBody>
           </Card>

@@ -30,7 +30,6 @@ import {
 } from "@heroui/table";
 import { User } from "@heroui/user";
 import "@/lib/extensions/array";
-import { CustomScrollShadow } from "@/components/customScrollShadow";
 import { CardTabs } from "@/components/cardTabs";
 
 const getTournamentStatus = (tournament: TournamentWithRelations): string => {
