@@ -413,6 +413,16 @@ export default function ViewMatchPage() {
                 </p>
               </div>
             </div>
+
+            {match.notes && <div className="flex items-center gap-3">
+              <IconNotes size={20} className="text-default-400 shrink-0" />
+              <div>
+                <p className="text-small text-default-500">Notes</p>
+                <p className="text-small italic">
+                  {match.notes}
+                </p>
+              </div>
+            </div>}
           </CardBody>
         </Card>
 
@@ -465,7 +475,7 @@ export default function ViewMatchPage() {
       {/* Historical Matchup Statistics */}
       <Card className="mb-6">
         <CardHeader className="flex gap-3">
-          <IconHistory className="text-primary" size={24} />
+          <IconHistory className={iconColor} size={24} />
           <div className="flex flex-col">
             <p className="text-md font-semibold">Historical Matchup</p>
             <p className="text-small text-default-500">
@@ -643,7 +653,7 @@ export default function ViewMatchPage() {
       </Card>
 
       {/* Match Notes */}
-      {match.notes && (
+      {/* {match.notes && (
         <Card className="mb-6">
           <CardHeader className="flex gap-3">
             <IconNotes className="text-primary" size={24} />
@@ -655,7 +665,7 @@ export default function ViewMatchPage() {
             <p className="text-small whitespace-pre-wrap">{match.notes}</p>
           </CardBody>
         </Card>
-      )}
+      )} */}
     </div>
   );
 }
