@@ -45,35 +45,127 @@ model Tournament {
   link       String?
   updatedAt  DateTime? @updatedAt
   createdAt  DateTime  @default(now())
+  structure  TournamentStructure
+  partecipants Int
 
+  bracket    Bracket?
   matches    Match[]
+  groupStage GroupStage?
   deckStats  TournamentDeckStats[]
 
   @@map("tournaments")
 }
+
+enum TournamentStructure {
+  SINGLE
+  DOUBLE
+  GROUP_SINGLE
+  GROUP_DOUBLE
+  DOUBLE_WITH_RESET
+}
+
+model Bracket {
+  id               Int       @id @default(autoincrement())
+  tournamentId     Int       @unique
+  tournament       Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  side             BracketSide @default(WINNER) 
+
+  nodes            BracketNode[]
+
+  @@map("brackets")
+}
+
+model BracketNode {
+  id           Int     @id @default(autoincrement())
+  bracketId    Int
+  bracket      Bracket @relation(fields: [bracketId], references: [id])
+  matchId      Int
+  round        Int
+
+  connectionsFrom BracketNodeConnection[] @relation("FromNode")
+  connectionsTo   BracketNodeConnection[] @relation("ToNode")
+
+  @@map("bracket_nodes")
+}
+
+enum BracketSide {
+  WINNER
+  LOSER
+}
+
+model BracketNodeConnection {
+  id         Int @id @default(autoincrement())
+  fromNode   BracketNode @relation("FromNode", fields: [fromNodeId], references: [id])
+  fromNodeId Int
+  toNode     BracketNode? @relation("ToNode", fields: [toNodeId], references: [id])
+  toNodeId   Int?
+
+  @@map("bracket_node_connections")
+}
+
+model GroupStage {
+  id                        Int       @id @default(autoincrement())
+  tournamentId              Int       @unique
+  tournament                Tournament @relation(fields: [tournamentId], references: [id])
+  participantsPerGroup      Int
+  advancePerGroup           Int
+  groupNodes                GroupStageNode[]
+
+  @@map("group_stages")
+}
+
+model GroupStageNode {
+  id               Int       @id @default(autoincrement())
+  groupStageId     Int
+  groupStage       GroupStage @relation(fields: [groupStageId], references: [id])
+  matchId          Int
+  groupNumber      Int
+
+  connectionsFrom GroupStageNodeConnection[] @relation("GroupFrom")
+  connectionsTo   GroupStageNodeConnection[] @relation("GroupTo")
+
+  @@map("group_stage_nodes")
+}
+
+model GroupStageNodeConnection {
+  id         Int @id @default(autoincrement())
+  fromNode   GroupStageNode @relation("GroupFrom", fields: [fromNodeId], references: [id])
+  fromNodeId Int
+  toNode     GroupStageNode @relation("GroupTo", fields: [toNodeId], references: [id])
+  toNodeId   Int
+
+  @@map("group_stage_node_connections")
+}
+
 
 model Match {
   id            Int       @id @default(autoincrement())
   tournament    Tournament? @relation(fields: [tournamentId], references: [id])
   tournamentId  Int?
 
-  deckA         Deck      @relation("DeckA", fields: [deckAId], references: [id])
-  deckAId       Int
+  deckA         Deck?      @relation("DeckA", fields: [deckAId], references: [id])
+  deckAId       Int?
 
-  deckB         Deck      @relation("DeckB", fields: [deckBId], references: [id])
-  deckBId       Int
+  deckB         Deck?      @relation("DeckB", fields: [deckBId], references: [id])
+  deckBId       Int?
 
   winner        Deck?     @relation("Winner", fields: [winnerId], references: [id])
   winnerId      Int?
 
   deckAScore    Int
   deckBScore    Int
+  status        MatchStatus @default(SCHEDULED)
   notes         String?
   date          DateTime
   updatedAt     DateTime? @updatedAt
   createdAt     DateTime  @default(now())
 
   @@map("matches")
+}
+
+enum MatchStatus {
+  SCHEDULED
+  COMPLETED
 }
 
 model Archetype {
@@ -111,59 +203,3 @@ model TournamentDeckStats {
   @@map("tournament_deck_stats")
 }
 
-
-/*
-Decks
-- id
-- name
-- archetype_id
-- format_id
-- description (null)
-- active (bool)
-- wins
-- losses
-- ties
-- created_at
-- updated_at
-
-Tournaments
-- id
-- name
-- format_id
-- start_date
-- end_date (null)
-- notes (null)
-- link (null)
-- updated_at
-- created_at
-
-Matches
-- id
-- tournament_id (null if friendly match)
-- deck_a_id
-- deck_b_id
-- winner_id (null if tie)
-- deck_a_score (number)
-- deck_b_score (number)
-- notes (null)
-- date
-- updated_at
-- created_at
-
-Archetypes
-- id
-- name
-
-Formats
-- id
-- name
-
-TournamentDeckStats
-- id
-- tournament_id
-- deck_id
-- final_rank (number)
-- wins
-- losses
-- ties
-*/

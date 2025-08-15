@@ -15,9 +15,6 @@ export const GET = withErrorHandler(async () => {
     },
   });
 
-  // Note: Avatar URLs should be managed through the avatar-cache API
-  // This endpoint now returns the avatar path, and the client should
-  // use the avatar cache to get presigned URLs
   return NextResponse.json(items);
 });
 

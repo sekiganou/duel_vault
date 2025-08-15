@@ -4,6 +4,7 @@ declare global {
       getWins: (item: T) => number,
       getLosses: (item: T) => number
     ): T[];
+    shuffle(): T[];
   }
 }
 
@@ -25,4 +26,14 @@ Array.prototype.sortByWinsAndLosses = function <T>(
   });
 };
 
-export {};
+Array.prototype.shuffle = function <T>(
+  this: T[],
+): T[] {
+  for (let i = this.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [this[i], this[j]] = [this[j], this[i]]; // Swap
+  }
+  return this;
+};
+
+export { };

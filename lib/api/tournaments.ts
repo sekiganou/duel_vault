@@ -2,6 +2,8 @@ import axios from "axios";
 import { TournamentWithRelations } from "@/types";
 import { addToast } from "@heroui/toast";
 import { getAvatarUrl } from "./avatarCache";
+import { TournamentStructure } from "@/generated/prisma";
+import { Selection } from "@heroui/react"
 
 const basePath = "/api/tournaments";
 
@@ -47,6 +49,8 @@ export async function createTournament(tournament: {
   endDate?: string | Date;
   notes?: string;
   link?: string;
+  partecipants: Array<number>;
+  structure: TournamentStructure;
 }) {
   try {
     const res = await axios.post(basePath, tournament);
@@ -64,6 +68,7 @@ export async function createTournament(tournament: {
   }
 }
 
+// TODO: Add a function to update the tournament structure
 export async function updateTournament(tournament: {
   id: string;
   name: string;

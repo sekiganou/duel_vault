@@ -1,3 +1,4 @@
+import { MatchStatus } from "@/generated/prisma";
 import z from "zod";
 
 export const UpsertMatchSchema = z.object({
@@ -9,5 +10,6 @@ export const UpsertMatchSchema = z.object({
   deckAScore: z.number().min(0),
   deckBScore: z.number().min(0),
   notes: z.string().nullable(),
+  status: z.enum(MatchStatus),
   date: z.string().datetime(),
 });

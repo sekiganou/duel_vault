@@ -54,11 +54,11 @@ export type MatchWithRelations = Match & {
     format: Format;
   };
   winner:
-    | (Deck & {
-        archetype: Archetype;
-        format: Format;
-      })
-    | null;
+  | (Deck & {
+    archetype: Archetype;
+    format: Format;
+  })
+  | null;
 };
 
 export const FormatDescriptions = {

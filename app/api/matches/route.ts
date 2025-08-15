@@ -1,11 +1,11 @@
 import { db } from "@/db";
+import { MatchStatus } from "@/generated/prisma";
 import { withErrorHandler } from "@/lib/middlewares/withErrorHandler";
 import { UpsertMatchSchema } from "@/lib/schemas/matches";
 import { DeckWithRelations } from "@/types";
 import { match } from "assert";
 import { NextRequest, NextResponse } from "next/server";
 import z from "zod";
-import { fi } from "zod/v4/locales/index.cjs";
 
 type MatchResult = "win" | "loss" | "tie";
 type PrismaTransaction = Parameters<Parameters<typeof db.$transaction>[0]>[0];
@@ -26,10 +26,10 @@ const updateTournamentDeckStats = async (
 
   if (!tournament || !deck) return;
 
-  // Only count matches where this deck actually participated
+  // Only count matches where this deck actually participated and are completed
   const deckMatches = tournament.matches.filter(
-    (match: { deckAId: number; deckBId: number; winnerId: number | null }) =>
-      match.deckAId === deckId || match.deckBId === deckId
+    (match) =>
+      (match.deckAId === deckId || match.deckBId === deckId) && match.status === MatchStatus.COMPLETED
   );
 
   const wins = deckMatches.reduce(
@@ -134,6 +134,9 @@ const calculateStatChanges = (
 
 export const GET = withErrorHandler(async () => {
   const items = await db.match.findMany({
+    where: {
+      status: MatchStatus.COMPLETED
+    },
     include: {
       tournament: true,
       deckA: {
@@ -178,6 +181,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const matchData = {
     ...dataWithoutId,
     date: new Date(date),
+    status: MatchStatus.COMPLETED,
   };
 
   // Use a single transaction to ensure data consistency
@@ -185,14 +189,14 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     // Get existing match data only if we're updating (not creating)
     const matchBefore = id
       ? await tx.match.findUnique({
-          where: { id },
-          select: {
-            tournamentId: true,
-            winnerId: true,
-            deckAId: true,
-            deckBId: true,
-          },
-        })
+        where: { id },
+        select: {
+          tournamentId: true,
+          winnerId: true,
+          deckAId: true,
+          deckBId: true,
+        },
+      })
       : null;
 
     const tournamentIdBefore = matchBefore?.tournamentId ?? null;
@@ -350,6 +354,9 @@ export const DELETE = withErrorHandler(async (req: NextRequest) => {
     };
 
     // Update deck stats and delete match in parallel
+    if (!deckAId || !deckBId || !match || !match.deckA || !match.deckB)
+      throw new Error("Decks not found for match");
+
     await Promise.all([
       tx.deck.update({
         where: { id: deckAId },

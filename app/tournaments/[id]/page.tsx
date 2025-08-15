@@ -311,16 +311,16 @@ export default function ViewTournamentPage() {
       <CardTabs
         tabs={[
           {
-            title: "Rankings",
-            key: "rankings",
+            title: "Standings",
+            key: "standings",
             emptyContent: {
-              header: "No Rankings Available",
-              text: "This tournament has no rankings yet.",
+              header: "No Standings Available",
+              text: "This tournament has no standings yet.",
               icon: (props) => <IconTrophy {...props} />,
               displayEmptyContent: tournament.deckStats.length === 0,
             },
             cardBody: (
-              <Table aria-label="Tournament Rankings">
+              <Table aria-label="Tournament Standings">
                 <TableHeader>
                   <TableColumn>RANK</TableColumn>
                   <TableColumn>DECK</TableColumn>

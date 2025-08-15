@@ -1,4 +1,5 @@
 import { db } from "@/db";
+import { MatchStatus } from "@/generated/prisma";
 import { withErrorHandler } from "@/lib/middlewares/withErrorHandler";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -19,6 +20,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   }
   const matches = await schema.findMany({
     where: {
+      status: MatchStatus.COMPLETED,
       OR: [
         {
           deckAId: deckAId,

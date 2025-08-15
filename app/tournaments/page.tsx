@@ -1,6 +1,6 @@
 "use client";
 
-import { Format } from "@/generated/prisma";
+import { Archetype, Deck, Format, Tournament, TournamentStructure } from "@/generated/prisma";
 import {
   createTournament,
   updateTournament,
@@ -12,6 +12,7 @@ import {
   TournamentWithRelations,
   StatusOptionDescriptor,
   TableColumnDescriptor,
+  DeckWithRelations,
 } from "@/types";
 
 import {
@@ -20,7 +21,7 @@ import {
   DropdownMenu,
   DropdownTrigger,
 } from "@heroui/dropdown";
-import { useCallback, useEffect, useState } from "react";
+import { ChangeEventHandler, useCallback, useEffect, useState } from "react";
 import { Button } from "@heroui/button";
 import { Chip, ChipProps } from "@heroui/chip";
 import { IconDotsVertical } from "@tabler/icons-react";
@@ -33,9 +34,12 @@ import {
   ModalFooter,
   useDisclosure,
 } from "@heroui/modal";
-import { Select, SelectItem } from "@heroui/select";
-import { FullTable } from "@/components/fullTable";
+import { select, Select, SelectedItems, Selection, SelectItem } from "@heroui/react";
+import { capitalize, FullTable } from "@/components/fullTable";
 import { useRouter } from "next/navigation";
+import { getAllDecks } from "@/lib/api/decks";
+import { Avatar } from "@heroui/avatar";
+
 
 const columns: TableColumnDescriptor[] = [
   { name: "ID", uid: "id", sortable: true },
@@ -45,6 +49,7 @@ const columns: TableColumnDescriptor[] = [
   { name: "END DATE", uid: "endDate", sortable: true },
   { name: "STATUS", uid: "status", sortable: false },
   { name: "MATCHES", uid: "matchCount", sortable: true },
+  { name: "PARTECIPANTS", uid: "partecipants", sortable: true },
   { name: "ACTIONS", uid: "actions", sortable: false },
 ];
 
@@ -55,6 +60,7 @@ const INITIAL_VISIBLE_COLUMNS = [
   "endDate",
   "status",
   "matchCount",
+  "partecipants",
   "actions",
 ];
 
@@ -150,6 +156,8 @@ const UpsertModal = ({
   tournament: TournamentWithRelations | null;
 }) => {
   const isEdit = !!tournament;
+  const [decks, setDecks] = useState<DeckWithRelations[]>()
+  const [mappedDecksIdName, setMappedDecksIdName] = useState<Map<number, string>>(new Map());
   const [tournamentName, setTournamentName] = useState("");
   const [tournamentFormatId, setTournamentFormatId] = useState("");
   const [tournamentStartDate, setTournamentStartDate] = useState("");
@@ -158,9 +166,19 @@ const UpsertModal = ({
   const [tournamentLink, setTournamentLink] = useState("");
   const [loadingCreateTournament, setLoadingCreateTournament] = useState(false);
   const [tournamentNameInputError, setTournamentNameInputError] = useState("");
+  const [tournamentPartecipants, setTournamentPartecipants] = useState<Selection>(new Set([]));
+  const [tournamentStructure, setTournamentStructure] = useState("");
 
   useEffect(() => {
     handleReset();
+    getAllDecks().then((decks) => {
+      setDecks(decks);
+      const deckMap = new Map<number, string>();
+      decks.forEach((deck) => {
+        deckMap.set(deck.id, deck.name);
+      });
+      setMappedDecksIdName(deckMap);
+    })
   }, [isOpen, tournament]);
 
   const handleReset = () => {
@@ -177,6 +195,8 @@ const UpsertModal = ({
       );
       setTournamentNotes(tournament.notes || "");
       setTournamentLink(tournament.link || "");
+      setTournamentPartecipants(new Set(tournament.deckStats.map(ds => ds.deckId.toString())))
+      setTournamentStructure(tournament.structure)
     } else {
       setTournamentName("");
       setTournamentFormatId("");
@@ -184,6 +204,8 @@ const UpsertModal = ({
       setTournamentEndDate(new Date().toISOString().slice(0, 16));
       setTournamentNotes("");
       setTournamentLink("");
+      setTournamentPartecipants(new Set([]))
+      setTournamentStructure("")
     }
     setTournamentNameInputError("");
   };
@@ -197,6 +219,8 @@ const UpsertModal = ({
       endDate: tournamentEndDate ? new Date(tournamentEndDate) : undefined,
       notes: tournamentNotes || undefined,
       link: tournamentLink || undefined,
+      partecipants: Array.from(tournamentPartecipants).map((p) => Number(p)),
+      structure: tournamentStructure as TournamentStructure
     };
 
     const operation = isEdit
@@ -215,6 +239,8 @@ const UpsertModal = ({
 
   const isFormValid =
     tournamentName.trim() && tournamentFormatId && tournamentStartDate;
+
+  console.log("tournamentPartecipants", tournamentPartecipants);
 
   return (
     <Modal isOpen={isOpen} onOpenChange={onOpenChange} size="2xl">
@@ -289,8 +315,53 @@ const UpsertModal = ({
                   value={tournamentLink}
                   onChange={(e) => setTournamentLink(e.target.value)}
                 />
+
+                <Select
+                  label="Tournament Structure"
+                  placeholder="Select structure"
+                  selectedKeys={[tournamentStructure]}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                    setTournamentStructure(e.target.value as TournamentStructure)
+                  }
+                  isRequired
+                >
+                  {Object.values(TournamentStructure).map((tournamentStructure) => (
+                    <SelectItem key={tournamentStructure} className="capitalize" >
+                      {capitalize(tournamentStructure.replaceAll("_", " ").toLowerCase())}
+                    </SelectItem>
+                  ))}
+                </Select>
+
+
               </div>
 
+              <Select label="Partecipants"
+                placeholder="Select all the partecipants"
+                isRequired
+                selectedKeys={tournamentPartecipants}
+                onSelectionChange={setTournamentPartecipants}
+                selectionMode="multiple"
+                isMultiline
+                renderValue={(items) => {
+                  return (
+                    <div className="flex flex-wrap gap-2">
+                      {items.map((item) => (
+                        <Chip key={item.key}>{mappedDecksIdName.get(Number(item.key))}</Chip>
+                      ))}
+                    </div>
+                  )
+                }}>
+                {(tournamentFormatId ? decks?.filter((deck) => deck.formatId === Number(tournamentFormatId))! : []).map((deck) => (
+                  <SelectItem key={deck.id.toString()}>
+                    <div className="flex gap-2 items-center">
+                      <Avatar alt={deck.name} className="shrink-0" size="sm" src={deck.avatar ?? ""} />
+                      <div className="flex flex-col">
+                        <span className="text-small">{deck.name}</span>
+                        <span className="text-tiny text-default-400">{deck.archetype.name}</span>
+                      </div>
+                    </div>
+                  </SelectItem>))}
+              </Select>
               <Input
                 label="Notes (Optional)"
                 placeholder="Add tournament notes or description"
@@ -316,9 +387,10 @@ const UpsertModal = ({
               </Button>
             </ModalFooter>
           </>
-        )}
-      </ModalContent>
-    </Modal>
+        )
+        }
+      </ModalContent >
+    </Modal >
   );
 };
 
