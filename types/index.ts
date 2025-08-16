@@ -1,5 +1,8 @@
 import {
   Archetype,
+  Bracket,
+  BracketNode,
+  BracketNodeConnection,
   Deck,
   Format,
   Match,
@@ -78,16 +81,24 @@ export type StatusOptionDescriptor = {
   uid: string;
 };
 
+
+type BracketNodeWithRelations = BracketNode & {
+  connectionsFrom: BracketNodeConnection[];
+  connectionsTo: BracketNodeConnection[];
+}
+type BracketWithRelations = Bracket & { nodes: BracketNodeWithRelations[] };
+
 export type TournamentWithRelations = Tournament & {
   format: Format;
   matches: (Match & {
-    deckA: DeckWithRelations;
-    deckB: DeckWithRelations;
+    deckA: DeckWithRelations | null;
+    deckB: DeckWithRelations | null;
     winner: DeckWithRelations | null;
   })[];
   deckStats: (TournamentDeckStats & {
     deck: DeckWithRelations;
   })[];
+  bracket: BracketWithRelations;
 };
 
 export type CardTabItem = {

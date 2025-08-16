@@ -42,6 +42,40 @@ export const GET = withErrorHandler(async () => {
   return NextResponse.json(items);
 });
 
+const getNumberOfMatches = (structure: TournamentStructure, partecipants: number) => {
+  switch (structure) {
+    case TournamentStructure.SINGLE:
+      return partecipants - 1; // Single elimination: n - 1 matches for n partecipants
+    case TournamentStructure.DOUBLE:
+      return (partecipants - 1) * 2; // Double elimination: 2 * (n - 1) matches for n partecipants
+    case TournamentStructure.DOUBLE_WITH_RESET:
+      return partecipants * 2 - 1; // Double elimination with reset: 2 * n - 1 matches for n partecipants
+    case TournamentStructure.GROUP_SINGLE:
+      return -1;  // TODO: i have to study
+    case TournamentStructure.GROUP_DOUBLE:
+      return -1;  // TODO: i have to study
+    default:
+      return -1;
+  }
+}
+
+const getNumberOfRounds = (structure: TournamentStructure, partecipants: number) => {
+  switch (structure) {
+    case TournamentStructure.SINGLE:
+      return Math.ceil(Math.log2(partecipants)); // Single elimination: log2(n) rounds for n partecipants
+    case TournamentStructure.DOUBLE:
+      return Math.ceil(Math.log2(partecipants + partecipants / 2)); // Double elimination: log2(n) + 1 rounds for n partecipants
+    case TournamentStructure.DOUBLE_WITH_RESET:
+      return Math.ceil(Math.log2(partecipants + partecipants / 2)) + 1; // Double elimination with reset: log2(n) + 1 rounds for n partecipants
+    case TournamentStructure.GROUP_SINGLE:
+      return -1;  // TODO: i have to study
+    case TournamentStructure.GROUP_DOUBLE:
+      return -1;  // TODO: i have to study
+    default:
+      return -1;
+  }
+}
+
 // Create a new tournament
 export const POST = withErrorHandler(async (req: NextRequest) => {
   const body = await req.json();
@@ -73,8 +107,6 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     deckBScore: number
   }[] = [];
 
-  // TODO: create a function to generate matches based on the tournament structure
-
   await db.$transaction(async tx => {
     const tournament = await tx.tournament.create({
       data: {
@@ -84,33 +116,43 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       select: {
         id: true,
         structure: true,
+        partecipants: true,
       },
     });
 
-    partecipants.forEach((deckId, index) => {
-      if (index % 2 === 0 && index + 1 < partecipants.length) {
-        matches.push({
+    await tx.tournamentDeckStats.createMany({
+      data: partecipants
+        .map(partecipantId => ({
           tournamentId: tournament.id,
-          deckAId: deckId,
-          deckBId: partecipants[index + 1],
-          status: MatchStatus.SCHEDULED,
-          date: new Date(),
-          deckAScore: 0,
-          deckBScore: 0,
-        });
-      }
+          deckId: partecipantId,
+          wins: 0,
+          losses: 0,
+          ties: 0,
+        })),
     });
 
-    for (let i = 0; i < partecipants.length; i++) {
-      matches.push({
+    const numberOfMatches = getNumberOfMatches(tournament.structure, tournament.partecipants);
+
+    // Create matches for the bracket
+    for (let i = 0; i < numberOfMatches; i++) {
+      const match = {
         tournamentId: tournament.id,
-        deckAId: null,
-        deckBId: null,
         status: MatchStatus.SCHEDULED,
         date: new Date(),
         deckAScore: 0,
         deckBScore: 0,
-      });
+        deckAId: null as number | null,
+        deckBId: null as number | null,
+      };
+
+      // For first round matches, assign participants
+      const firstRoundMatches = Math.pow(2, Math.floor(Math.log2(tournament.partecipants)));
+      if (i < firstRoundMatches && i * 2 + 1 < partecipants.length) {
+        match.deckAId = partecipants[i * 2];
+        match.deckBId = partecipants[i * 2 + 1];
+      }
+
+      matches.push(match);
     }
 
     await tx.match.createMany({
@@ -128,41 +170,35 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       },
     }).then(t => t && t.matches.map(m => m.id));
 
-    await tx.tournamentDeckStats.createMany({
-      data: partecipants
-        .map(partecipant => ({
-          tournamentId: tournament.id,
-          deckId: partecipant,
-          wins: 0,
-          losses: 0,
-          ties: 0,
-        })),
-    });
-
     const bracketWinnerId = await tx.bracket.create({
       data: {
         tournamentId: tournament.id,
         side: BracketSide.WINNER
       },
     }).then(b => b.id);
-    // let bracketLoserId: number | null;
-    // if (tournament.structure === TournamentStructure.DOUBLE) {
-    //   bracketLoserId = await tx.bracket.create({
-    //     data: {
-    //       tournamentId: tournament.id,
-    //       side: BracketSide.LOSER
-    //     },
-    //   }).then(b => b.id);
-    // }
 
-
+    const numberOfRounds = getNumberOfRounds(tournament.structure, tournament.partecipants);
     const bracketNodes: { bracketId: number, matchId: number, round: number }[] = [];
-    createdMatchesId?.forEach((id, index) =>
-      bracketNodes.push({
-        matchId: id,
-        bracketId: bracketWinnerId,
-        round: index + 1,
-      }))
+
+    // Distribute matches across rounds properly for a tournament bracket
+    if (createdMatchesId) {
+      let matchIndex = 0;
+
+      for (let round = 1; round <= numberOfRounds; round++) {
+        // Calculate number of matches in this round
+        // For single elimination: round 1 has most matches, each subsequent round has half
+        const matchesInThisRound = Math.pow(2, numberOfRounds - round);
+
+        for (let i = 0; i < matchesInThisRound && matchIndex < createdMatchesId.length; i++) {
+          bracketNodes.push({
+            matchId: createdMatchesId[matchIndex],
+            bracketId: bracketWinnerId,
+            round: round,
+          });
+          matchIndex++;
+        }
+      }
+    }
 
     await tx.bracketNode.createMany({
       data: bracketNodes,
@@ -171,77 +207,56 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     const createdBracketNodes = await tx.bracketNode.findMany({
       where: { bracketId: bracketWinnerId },
       select: { id: true, round: true },
-      orderBy: { round: "asc" },
-    })
+      orderBy: [{ round: "asc" }, { id: "asc" }],
+    });
+
+    // Group nodes by round
+    const nodesByRound: { [round: number]: { id: number }[] } = {};
+    createdBracketNodes.forEach(node => {
+      if (!nodesByRound[node.round]) {
+        nodesByRound[node.round] = [];
+      }
+      nodesByRound[node.round].push({ id: node.id });
+    });
 
     const bracketConnections: { fromNodeId: number, toNodeId: number }[] = [];
-    for (let i = 0; i < createdBracketNodes.length; i++) {
-      if (i < partecipants.length)
-        bracketConnections.push({
-          fromNodeId: createdBracketNodes[i].id,
-          toNodeId: createdBracketNodes
-            .find((node) => node.round === createdBracketNodes[i].round + 1)?.id || createdBracketNodes[i].id
-        })
-      else
-        bracketConnections.push({
-          fromNodeId: createdBracketNodes[i].id,
-          toNodeId: createdBracketNodes
-            .find((node) => node.round === createdBracketNodes[i].round + partecipants.length)?.id || createdBracketNodes[i].id
-        });
+
+    // Create connections between rounds
+    for (let round = 1; round < numberOfRounds; round++) {
+      const currentRoundNodes = nodesByRound[round];
+      const nextRoundNodes = nodesByRound[round + 1];
+
+      if (currentRoundNodes && nextRoundNodes) {
+        // Each pair of nodes in current round connects to one node in next round
+        for (let i = 0; i < currentRoundNodes.length; i += 2) {
+          const targetNodeIndex = Math.floor(i / 2);
+          const targetNode = nextRoundNodes[targetNodeIndex];
+
+          if (targetNode) {
+            // Connect first node of the pair
+            bracketConnections.push({
+              fromNodeId: currentRoundNodes[i].id,
+              toNodeId: targetNode.id,
+            });
+
+            // Connect second node of the pair (if it exists)
+            if (currentRoundNodes[i + 1]) {
+              bracketConnections.push({
+                fromNodeId: currentRoundNodes[i + 1].id,
+                toNodeId: targetNode.id,
+              });
+            }
+          }
+        }
+      }
     }
 
-    await tx.bracketNodeConnection.createMany({
-      data: bracketConnections,
-    });
+    if (bracketConnections.length > 0) {
+      await tx.bracketNodeConnection.createMany({
+        data: bracketConnections,
+      });
+    }
   });
 
   return NextResponse.json({ success: true });
-});
-
-export const DELETE = withErrorHandler(async (req: NextRequest) => {
-  const { searchParams } = new URL(req.url);
-  const id = parseInt(searchParams.get("id") || "");
-
-  if (isNaN(id)) {
-    return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
-  }
-
-  // Check if tournament exists
-  const tournament = await db.tournament.findUnique({
-    where: { id },
-    include: {
-      matches: true,
-      deckStats: true,
-    },
-  });
-
-  if (!tournament) {
-    return NextResponse.json(
-      { error: "Tournament not found" },
-      { status: 404 }
-    );
-  }
-
-  // Use transaction to ensure data consistency when deleting
-  await db.$transaction(async (tx) => {
-    // Delete tournament deck stats first (due to foreign key constraints)
-    // await tx.tournamentDeckStats.deleteMany({
-    //   where: { tournamentId: id },
-    // });
-
-    // Update matches to remove tournament reference (set tournamentId to null)
-    // This preserves match history while removing tournament association
-    await tx.match.updateMany({
-      where: { tournamentId: id },
-      data: { tournamentId: null },
-    });
-
-    // Finally delete the tournament
-    await tx.tournament.delete({
-      where: { id },
-    });
-
-  });
-
-  return NextResponse.json({ success: true, deletedId: id });
 });

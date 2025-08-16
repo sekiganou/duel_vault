@@ -18,13 +18,13 @@ export async function getTournamentById(
   const res = await axios.get(`${basePath}/${id}`);
   const tournament: TournamentWithRelations = res.data;
   tournament.matches.map(async (match) => {
-    if (match.deckA.avatar) {
+    if (match.deckA && match.deckA.avatar) {
       const presignedUrl = await getAvatarUrl(match.deckA.avatar);
       if (presignedUrl) {
         match.deckA.avatar = presignedUrl;
       }
     }
-    if (match.deckB.avatar) {
+    if (match.deckB && match.deckB.avatar) {
       const presignedUrl = await getAvatarUrl(match.deckB.avatar);
       if (presignedUrl) {
         match.deckB.avatar = presignedUrl;

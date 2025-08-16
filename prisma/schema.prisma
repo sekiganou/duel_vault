@@ -140,7 +140,7 @@ model GroupStageNodeConnection {
 
 model Match {
   id            Int       @id @default(autoincrement())
-  tournament    Tournament? @relation(fields: [tournamentId], references: [id])
+  tournament    Tournament? @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   tournamentId  Int?
 
   deckA         Deck?      @relation("DeckA", fields: [deckAId], references: [id])

@@ -21,12 +21,18 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
       id: id,
     },
     include: {
+      bracket: {
+        include: {
+          nodes: {
+            include: {
+              connectionsFrom: true,
+              connectionsTo: true
+            }
+          }
+        }
+      },
       format: true,
       matches: {
-        where: {
-          deckAId: { not: null },
-          deckBId: { not: null },
-        },
         include: {
           deckA: {
             include: {

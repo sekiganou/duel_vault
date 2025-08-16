@@ -164,8 +164,8 @@ const UpsertModal = ({
   const handleReset = () => {
     if (match) {
       setTournamentId(match.tournamentId?.toString() || "");
-      setDeckAId(match.deckAId.toString());
-      setDeckBId(match.deckBId.toString());
+      setDeckAId(match.deckAId!.toString());
+      setDeckBId(match.deckBId!.toString());
       setWinnerId(match.winnerId?.toString() || "");
       setDeckAScore(match.deckAScore.toString());
       setDeckBScore(match.deckBScore.toString());

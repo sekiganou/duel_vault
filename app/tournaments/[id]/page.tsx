@@ -31,6 +31,7 @@ import {
 import { User } from "@heroui/user";
 import "@/lib/extensions/array";
 import { CardTabs } from "@/components/cardTabs";
+import { MatchStatus } from "@/generated/prisma";
 
 const getTournamentStatus = (tournament: TournamentWithRelations): string => {
   const now = new Date();
@@ -141,6 +142,7 @@ export default function ViewTournamentPage() {
 
   const status = getTournamentStatus(tournament);
   const totalMatches = tournament.matches.length;
+  const totalMatchesPlayed = tournament.matches.filter(match => match.status === MatchStatus.COMPLETED).length;
 
   // Calculate tournament duration
   const startDate = new Date(tournament.startDate);
@@ -288,7 +290,7 @@ export default function ViewTournamentPage() {
               <span className="text-small text-default-500">
                 Matches Played
               </span>
-              <span className="text-small font-medium">{totalMatches}</span>
+              <span className="text-small font-medium">{totalMatchesPlayed}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-small text-default-500">Format</span>
@@ -337,47 +339,6 @@ export default function ViewTournamentPage() {
                       (deckStat) => deckStat.wins,
                       (deckStat) => deckStat.losses
                     )
-                    .sort((a, b) => {
-                      // If wins and losses are the same, use last match date as tiebreaker
-                      if (a.wins === b.wins && a.losses === b.losses) {
-                        // Find each deck's last match (their elimination match or final match)
-                        const aDeckMatches = tournament.matches
-                          .filter(
-                            (match) =>
-                              match.deckA.id === a.deckId ||
-                              match.deckB.id === a.deckId
-                          )
-                          .sort(
-                            (m1, m2) =>
-                              new Date(m2.date).getTime() -
-                              new Date(m1.date).getTime()
-                          );
-
-                        const bDeckMatches = tournament.matches
-                          .filter(
-                            (match) =>
-                              match.deckA.id === b.deckId ||
-                              match.deckB.id === b.deckId
-                          )
-                          .sort(
-                            (m1, m2) =>
-                              new Date(m2.date).getTime() -
-                              new Date(m1.date).getTime()
-                          );
-
-                        // Deck with later final match gets better placement (lower index)
-                        const aLastMatch = aDeckMatches[0]?.date;
-                        const bLastMatch = bDeckMatches[0]?.date;
-
-                        if (aLastMatch && bLastMatch) {
-                          return (
-                            new Date(bLastMatch).getTime() -
-                            new Date(aLastMatch).getTime()
-                          );
-                        }
-                      }
-                      return 0; // No change if not tied or no match data
-                    })
                     .map((deckStat, index) => {
                       const totalGames =
                         deckStat.wins + deckStat.losses + deckStat.ties;
@@ -478,6 +439,7 @@ export default function ViewTournamentPage() {
                 </TableHeader>
                 <TableBody>
                   {tournament.matches
+                    .filter(match => match.status === MatchStatus.COMPLETED)
                     .sort(
                       (a, b) =>
                         new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -491,11 +453,11 @@ export default function ViewTournamentPage() {
                         </TableCell>
                         <TableCell>
                           <User
-                            name={match.deckA.name}
-                            description={match.deckA.archetype.name}
+                            name={match.deckA ? match.deckA.name : "Unknown"}
+                            description={match.deckA ? match.deckA.archetype.name : "Unknown"}
                             className="shrink-0"
                             avatarProps={{
-                              src: match.deckA.avatar || undefined,
+                              src: (match.deckA && match.deckA.avatar) || undefined,
                               size: "sm",
                               radius: "lg",
                             }}
@@ -503,11 +465,11 @@ export default function ViewTournamentPage() {
                         </TableCell>
                         <TableCell>
                           <User
-                            name={match.deckB.name}
-                            description={match.deckB.archetype.name}
+                            name={match.deckB ? match.deckB.name : "Unknown"}
+                            description={match.deckB ? match.deckB.archetype.name : "Unknown"}
                             className="shrink-0"
                             avatarProps={{
-                              src: match.deckB.avatar || undefined,
+                              src: (match.deckB && match.deckB.avatar) || undefined,
                               size: "sm",
                               radius: "lg",
                             }}
@@ -515,23 +477,29 @@ export default function ViewTournamentPage() {
                         </TableCell>
                         <TableCell>
                           <span className="font-mono">
-                            {match.deckAScore} - {match.deckBScore}
+                            {match.status === MatchStatus.COMPLETED
+                              ? `${match.deckAScore} - ${match.deckBScore}`
+                              : "Not Started"}
                           </span>
                         </TableCell>
                         <TableCell>
-                          {match.winner ? (
-                            match.winner.id === match.deckA.id ? (
+                          {match.status === MatchStatus.COMPLETED ? (match.winner ? (
+                            (match.deckA && match.winner.id === match.deckA.id) ? (
                               <span className="text-success font-semibold">
                                 {match.deckA.name}
                               </span>
                             ) : (
                               <span className="text-danger font-semibold">
-                                {match.deckB.name}
+                                {match.deckB && match.deckB.name}
                               </span>
                             )
                           ) : (
                             <span className="text-warning font-semibold">
                               Tie
+                            </span>
+                          )) : (
+                            <span className="text-muted font-semibold">
+                              Not Started
                             </span>
                           )}
                         </TableCell>
@@ -542,6 +510,8 @@ export default function ViewTournamentPage() {
                             size="sm"
                             onPress={() => router.push(`/matches/${match.id}`)}
                             aria-label={`View match ${match.id}`}
+                            isDisabled={match.status === MatchStatus.SCHEDULED}
+
                           >
                             View
                           </Button>
