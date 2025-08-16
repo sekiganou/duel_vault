@@ -1,105 +1,106 @@
 /*
   Warnings:
 
-  - Added the required column `structure` to the `tournaments` table without a default value. This is not possible if the table is not empty.
-
+  - You are about to drop the `Bracket` table. If the table is not empty, all the data it contains will be lost.
+  - You are about to drop the `BracketNode` table. If the table is not empty, all the data it contains will be lost.
+  - You are about to drop the `BracketNodeConnection` table. If the table is not empty, all the data it contains will be lost.
+  - You are about to drop the `GroupStage` table. If the table is not empty, all the data it contains will be lost.
+  - You are about to drop the `GroupStageNode` table. If the table is not empty, all the data it contains will be lost.
+  - You are about to drop the `GroupStageNodeConnection` table. If the table is not empty, all the data it contains will be lost.
 */
 -- CreateEnum
-CREATE TYPE "public"."TournamentStructure" AS ENUM ('SINGLE', 'DOUBLE', 'GROUP_SINGLE', 'GROUP_DOUBLE', 'DOUBLE_WITH_RESET');
+CREATE TYPE "public"."TournamentStructure" AS ENUM ('SINGLE','DOUBLE','GROUP_SINGLE','GROUP_DOUBLE','DOUBLE_WITH_RESET');
+ALTER TABLE "public"."tournaments" ADD COLUMN "structure" "public"."TournamentStructure" NOT NULL DEFAULT 'SINGLE';
+ALTER TABLE "public"."tournaments" ADD COLUMN "partecipants" INTEGER NOT NULL;
 
--- CreateEnum
 CREATE TYPE "public"."MatchStatus" AS ENUM ('SCHEDULED', 'COMPLETED');
+ALTER TABLE "public"."matches" ADD COLUMN "status" "public"."MatchStatus" NOT NULL DEFAULT 'SCHEDULED';
 
--- AlterTable
-ALTER TABLE "public"."matches" ADD COLUMN     "status" "public"."MatchStatus" NOT NULL DEFAULT 'SCHEDULED';
-
--- AlterTable
-ALTER TABLE "public"."tournaments" ADD COLUMN     "structure" "public"."TournamentStructure" NOT NULL;
-
+CREATE TYPE "public"."BracketSide" AS ENUM ('WINNER', 'LOSER');
 -- CreateTable
-CREATE TABLE "public"."Bracket" (
+CREATE TABLE "public"."brackets" (
     "id" SERIAL NOT NULL,
     "tournamentId" INTEGER NOT NULL,
+    "side" "public"."BracketSide" NOT NULL DEFAULT 'WINNER',
 
-    CONSTRAINT "Bracket_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "brackets_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."BracketNode" (
+CREATE TABLE "public"."bracket_nodes" (
     "id" SERIAL NOT NULL,
     "bracketId" INTEGER NOT NULL,
     "matchId" INTEGER NOT NULL,
     "round" INTEGER NOT NULL,
-    "side" TEXT NOT NULL,
 
-    CONSTRAINT "BracketNode_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "bracket_nodes_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."BracketNodeConnection" (
+CREATE TABLE "public"."bracket_node_connections" (
     "id" SERIAL NOT NULL,
     "fromNodeId" INTEGER NOT NULL,
-    "toNodeId" INTEGER NOT NULL,
-    "qualifier" TEXT NOT NULL,
+    "toNodeId" INTEGER,
 
-    CONSTRAINT "BracketNodeConnection_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "bracket_node_connections_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."GroupStage" (
+CREATE TABLE "public"."group_stages" (
     "id" SERIAL NOT NULL,
     "tournamentId" INTEGER NOT NULL,
     "participantsPerGroup" INTEGER NOT NULL,
     "advancePerGroup" INTEGER NOT NULL,
 
-    CONSTRAINT "GroupStage_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "group_stages_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."GroupStageNode" (
+CREATE TABLE "public"."group_stage_nodes" (
     "id" SERIAL NOT NULL,
     "groupStageId" INTEGER NOT NULL,
     "matchId" INTEGER NOT NULL,
     "groupNumber" INTEGER NOT NULL,
 
-    CONSTRAINT "GroupStageNode_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "group_stage_nodes_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."GroupStageNodeConnection" (
+CREATE TABLE "public"."group_stage_node_connections" (
     "id" SERIAL NOT NULL,
     "fromNodeId" INTEGER NOT NULL,
     "toNodeId" INTEGER NOT NULL,
 
-    CONSTRAINT "GroupStageNodeConnection_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "group_stage_node_connections_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Bracket_tournamentId_key" ON "public"."Bracket"("tournamentId");
+CREATE UNIQUE INDEX "brackets_tournamentId_key" ON "public"."brackets"("tournamentId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "GroupStage_tournamentId_key" ON "public"."GroupStage"("tournamentId");
+CREATE UNIQUE INDEX "group_stages_tournamentId_key" ON "public"."group_stages"("tournamentId");
 
 -- AddForeignKey
-ALTER TABLE "public"."Bracket" ADD CONSTRAINT "Bracket_tournamentId_fkey" FOREIGN KEY ("tournamentId") REFERENCES "public"."tournaments"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "public"."brackets" ADD CONSTRAINT "brackets_tournamentId_fkey" FOREIGN KEY ("tournamentId") REFERENCES "public"."tournaments"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."BracketNode" ADD CONSTRAINT "BracketNode_bracketId_fkey" FOREIGN KEY ("bracketId") REFERENCES "public"."Bracket"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "public"."bracket_nodes" ADD CONSTRAINT "bracket_nodes_bracketId_fkey" FOREIGN KEY ("bracketId") REFERENCES "public"."brackets"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."BracketNodeConnection" ADD CONSTRAINT "BracketNodeConnection_fromNodeId_fkey" FOREIGN KEY ("fromNodeId") REFERENCES "public"."BracketNode"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "public"."bracket_node_connections" ADD CONSTRAINT "bracket_node_connections_fromNodeId_fkey" FOREIGN KEY ("fromNodeId") REFERENCES "public"."bracket_nodes"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."BracketNodeConnection" ADD CONSTRAINT "BracketNodeConnection_toNodeId_fkey" FOREIGN KEY ("toNodeId") REFERENCES "public"."BracketNode"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "public"."bracket_node_connections" ADD CONSTRAINT "bracket_node_connections_toNodeId_fkey" FOREIGN KEY ("toNodeId") REFERENCES "public"."bracket_nodes"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."GroupStage" ADD CONSTRAINT "GroupStage_tournamentId_fkey" FOREIGN KEY ("tournamentId") REFERENCES "public"."tournaments"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "public"."group_stages" ADD CONSTRAINT "group_stages_tournamentId_fkey" FOREIGN KEY ("tournamentId") REFERENCES "public"."tournaments"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."GroupStageNode" ADD CONSTRAINT "GroupStageNode_groupStageId_fkey" FOREIGN KEY ("groupStageId") REFERENCES "public"."GroupStage"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "public"."group_stage_nodes" ADD CONSTRAINT "group_stage_nodes_groupStageId_fkey" FOREIGN KEY ("groupStageId") REFERENCES "public"."group_stages"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."GroupStageNodeConnection" ADD CONSTRAINT "GroupStageNodeConnection_fromNodeId_fkey" FOREIGN KEY ("fromNodeId") REFERENCES "public"."GroupStageNode"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "public"."group_stage_node_connections" ADD CONSTRAINT "group_stage_node_connections_fromNodeId_fkey" FOREIGN KEY ("fromNodeId") REFERENCES "public"."group_stage_nodes"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."GroupStageNodeConnection" ADD CONSTRAINT "GroupStageNodeConnection_toNodeId_fkey" FOREIGN KEY ("toNodeId") REFERENCES "public"."GroupStageNode"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "public"."group_stage_node_connections" ADD CONSTRAINT "group_stage_node_connections_toNodeId_fkey" FOREIGN KEY ("toNodeId") REFERENCES "public"."group_stage_nodes"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+

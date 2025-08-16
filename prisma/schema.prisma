@@ -78,7 +78,7 @@ model Bracket {
 model BracketNode {
   id           Int     @id @default(autoincrement())
   bracketId    Int
-  bracket      Bracket @relation(fields: [bracketId], references: [id])
+  bracket      Bracket @relation(fields: [bracketId], references: [id], onDelete: Cascade)
   matchId      Int
   round        Int
 
@@ -95,9 +95,9 @@ enum BracketSide {
 
 model BracketNodeConnection {
   id         Int @id @default(autoincrement())
-  fromNode   BracketNode @relation("FromNode", fields: [fromNodeId], references: [id])
+  fromNode   BracketNode @relation("FromNode", fields: [fromNodeId], references: [id], onDelete: Cascade)
   fromNodeId Int
-  toNode     BracketNode? @relation("ToNode", fields: [toNodeId], references: [id])
+  toNode     BracketNode? @relation("ToNode", fields: [toNodeId], references: [id], onDelete: Cascade)
   toNodeId   Int?
 
   @@map("bracket_node_connections")
@@ -106,7 +106,7 @@ model BracketNodeConnection {
 model GroupStage {
   id                        Int       @id @default(autoincrement())
   tournamentId              Int       @unique
-  tournament                Tournament @relation(fields: [tournamentId], references: [id])
+  tournament                Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   participantsPerGroup      Int
   advancePerGroup           Int
   groupNodes                GroupStageNode[]
@@ -117,7 +117,7 @@ model GroupStage {
 model GroupStageNode {
   id               Int       @id @default(autoincrement())
   groupStageId     Int
-  groupStage       GroupStage @relation(fields: [groupStageId], references: [id])
+  groupStage       GroupStage @relation(fields: [groupStageId], references: [id], onDelete: Cascade)
   matchId          Int
   groupNumber      Int
 
@@ -129,9 +129,9 @@ model GroupStageNode {
 
 model GroupStageNodeConnection {
   id         Int @id @default(autoincrement())
-  fromNode   GroupStageNode @relation("GroupFrom", fields: [fromNodeId], references: [id])
+  fromNode   GroupStageNode @relation("GroupFrom", fields: [fromNodeId], references: [id], onDelete: Cascade)
   fromNodeId Int
-  toNode     GroupStageNode @relation("GroupTo", fields: [toNodeId], references: [id])
+  toNode     GroupStageNode @relation("GroupTo", fields: [toNodeId], references: [id], onDelete: Cascade)
   toNodeId   Int
 
   @@map("group_stage_node_connections")
