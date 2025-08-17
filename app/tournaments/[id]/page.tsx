@@ -1,9 +1,9 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useLayoutEffect } from "react";
 import { getTournamentById } from "@/lib/api/tournaments";
-import { CardTabItem, TournamentWithRelations } from "@/types";
+import { BracketMatch, BracketMatchState, BracketMatchStatus, CardTabItem, TournamentWithRelations } from "@/types";
 import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Chip } from "@heroui/chip";
 import { Spinner } from "@heroui/spinner";
@@ -17,6 +17,7 @@ import {
   IconSwords,
   IconGraph,
   IconEye,
+  IconEdit,
 } from "@tabler/icons-react";
 import { Button } from "@heroui/button";
 import { capitalize } from "@/components/fullTable";
@@ -31,7 +32,62 @@ import {
 import { User } from "@heroui/user";
 import "@/lib/extensions/array";
 import { CardTabs } from "@/components/cardTabs";
-import { MatchStatus } from "@/generated/prisma";
+import { MatchStatus, TournamentStructure } from "@/generated/prisma";
+import { SingleEliminationBracket, DoubleEliminationBracket, Match, SVGViewer } from '@g-loot/react-tournament-brackets';
+import useComponentSize from '@rehooks/component-size'
+
+// Type for react-tournament-brackets
+const convertTournamentToBracket = (tournament: TournamentWithRelations): BracketMatch[] => {
+  if (!tournament.bracket || !tournament.bracket.nodes.length) {
+    return [];
+  }
+
+  const bracketMatches: BracketMatch[] = [];
+
+  tournament.bracket.nodes.forEach((node, index) => {
+    const match = tournament.matches.find(m => m.id === node.matchId);
+    if (!match) return;
+
+    const participants = [];
+
+    if (match.deckA) {
+      participants.push({
+        id: match.deckA.id.toString(),
+        resultText: match.status === MatchStatus.COMPLETED ? match.deckAScore.toString() : null,
+        isWinner: match.winner?.id === match.deckA.id,
+        status: match.status === MatchStatus.COMPLETED ? BracketMatchStatus.PLAYED : null,
+        name: match.deckA.name,
+      });
+    }
+
+    if (match.deckB) {
+      participants.push({
+        id: match.deckB.id.toString(),
+        resultText: match.status === MatchStatus.COMPLETED ? match.deckBScore.toString() : null,
+        isWinner: match.winner?.id === match.deckB.id,
+        status: match.status === MatchStatus.COMPLETED ? BracketMatchStatus.PLAYED : null,
+        name: match.deckB.name,
+      });
+    }
+
+    // Find next match connection
+    const nextConnection = node.connectionsFrom.find(conn => conn.toNodeId);
+    const nextMatchId = nextConnection?.toNodeId ?
+      tournament.bracket.nodes.find(n => n.id === nextConnection.toNodeId)?.matchId : null;
+
+    bracketMatches.push({
+      id: match.id,
+      name: `Round ${node.round}`,
+      nextMatchId: nextMatchId || null,
+      tournamentRoundText: `${node.round}`,
+      startTime: match.date.toString().split("T")[0],
+      state: match.status === MatchStatus.COMPLETED ? BracketMatchState.DONE : BracketMatchState.SCHEDULED,
+      participants,
+    });
+  });
+
+  return bracketMatches;
+};
 
 const getTournamentStatus = (tournament: TournamentWithRelations): string => {
   const now = new Date();
@@ -82,6 +138,81 @@ export default function ViewTournamentPage() {
       }
     }
   }, [tournament]);
+
+  const bracketMatches = tournament && convertTournamentToBracket(tournament)
+  const BracketViewer = ({ tournament }: { tournament: TournamentWithRelations }) => {
+    const bracketRef = useRef<HTMLDivElement>(null);
+    const { width: bracketWidth, height: bracketHeight } = useComponentSize(bracketRef);
+    const [shouldRender, setShouldRender] = useState(false);
+
+    useLayoutEffect(() => {
+      setShouldRender(true);
+    }, []);
+
+    return (
+      <Card ref={bracketRef} style={{ minHeight: 400, minWidth: 600 }}>
+        {shouldRender && bracketWidth > 0 && bracketHeight > 0 && (
+          tournament.structure === TournamentStructure.SINGLE ? (
+            <SingleEliminationBracket
+              matches={bracketMatches}
+              matchComponent={Match}
+              svgWrapper={({
+                children,
+                ...props
+              }: {
+                children: React.ReactNode;
+                [key: string]: any;
+              }) => (
+                <SVGViewer
+                  {...props}
+                  width={bracketWidth}
+                  height={bracketHeight}
+                  background="transparent"
+                  SVGBackground="transparent"
+                >
+                  {children}
+                </SVGViewer>
+              )}
+            />
+          ) : tournament.structure === TournamentStructure.DOUBLE ? (
+            <DoubleEliminationBracket
+              matches={bracketMatches}
+              matchComponent={Match}
+              svgWrapper={({
+                children,
+                ...props
+              }: {
+                children: React.ReactNode;
+                [key: string]: any;
+              }) => (
+                <SVGViewer
+                  {...props}
+                  width={bracketWidth}
+                  height={bracketHeight}
+                  background="transparent"
+                  SVGBackground="transparent"
+                >
+
+                  {children}
+                </SVGViewer>
+              )}
+            />
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-default-500">
+                Bracket visualization not supported for {tournament.structure} tournaments yet.
+              </p>
+            </div>
+          )
+        )}
+        {(!shouldRender || bracketWidth === 0) && (
+          <div className="flex justify-center items-center h-96">
+            <Spinner size="lg" />
+          </div>
+        )}
+      </Card>
+    );
+  };
 
   if (loading) {
     return (
@@ -521,6 +652,21 @@ export default function ViewTournamentPage() {
                 </TableBody>
               </Table>
             ),
+          },
+          {
+            title: "Bracket",
+            key: "bracket",
+            emptyContent: {
+              header: "No Bracket Available",
+              text: "This tournament has no bracket yet.",
+              icon: (props) => <IconTrophy {...props} />,
+              displayEmptyContent: tournament.bracket === null || !tournament.bracket.nodes.length,
+            },
+            cardBody: tournament.bracket && tournament.bracket.nodes.length > 0 ? (
+              <>
+                <BracketViewer tournament={tournament} />
+              </>
+            ) : null
           },
         ]}
       />

@@ -112,3 +112,35 @@ export type CardTabItem = {
     displayEmptyContent: boolean;
   };
 };
+
+export enum BracketMatchState {
+  SCHEDULED,
+  RUNNING,
+  DONE,
+  SCORE_DONE
+}
+
+export enum BracketMatchStatus {
+  PLAYED,
+  NO_SHOW,
+  WALK_OVER,
+  NO_PARTY
+}
+
+export interface BracketMatch {
+  id: number;
+  name: string;
+  nextMatchId?: number | null;
+  nextLooserMatchId?: number | null;
+  tournamentRoundText?: string;
+  startTime: string;
+  state: BracketMatchState;
+  participants: Array<{
+    id: string;
+    resultText?: string | null;
+    isWinner?: boolean;
+    status?: BracketMatchStatus | null;
+    name: string;
+  }>
+}
+

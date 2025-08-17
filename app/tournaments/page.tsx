@@ -240,8 +240,6 @@ const UpsertModal = ({
   const isFormValid =
     tournamentName.trim() && tournamentFormatId && tournamentStartDate;
 
-  console.log("tournamentPartecipants", tournamentPartecipants);
-
   return (
     <Modal isOpen={isOpen} onOpenChange={onOpenChange} size="2xl">
       <ModalContent>
