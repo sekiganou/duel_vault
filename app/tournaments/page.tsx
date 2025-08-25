@@ -1,6 +1,6 @@
 "use client";
 
-import { Format } from "@/generated/prisma";
+import { Archetype, Deck, Format, Tournament } from "@/generated/prisma";
 import {
   createTournament,
   updateTournament,
@@ -12,6 +12,7 @@ import {
   TournamentWithRelations,
   StatusOptionDescriptor,
   TableColumnDescriptor,
+  DeckWithRelations,
 } from "@/types";
 
 import {
@@ -20,7 +21,7 @@ import {
   DropdownMenu,
   DropdownTrigger,
 } from "@heroui/dropdown";
-import { useCallback, useEffect, useState } from "react";
+import { ChangeEventHandler, useCallback, useEffect, useState } from "react";
 import { Button } from "@heroui/button";
 import { Chip, ChipProps } from "@heroui/chip";
 import { IconDotsVertical } from "@tabler/icons-react";
@@ -33,9 +34,18 @@ import {
   ModalFooter,
   useDisclosure,
 } from "@heroui/modal";
-import { Select, SelectItem } from "@heroui/select";
-import { FullTable } from "@/components/fullTable";
+import {
+  select,
+  Select,
+  SelectedItems,
+  Selection,
+  SelectItem,
+  Tooltip,
+} from "@heroui/react";
+import { capitalize, FullTable } from "@/components/fullTable";
 import { useRouter } from "next/navigation";
+import { getAllDecks } from "@/lib/api/decks";
+import { Avatar } from "@heroui/avatar";
 
 const columns: TableColumnDescriptor[] = [
   { name: "ID", uid: "id", sortable: true },
@@ -45,6 +55,7 @@ const columns: TableColumnDescriptor[] = [
   { name: "END DATE", uid: "endDate", sortable: true },
   { name: "STATUS", uid: "status", sortable: false },
   { name: "MATCHES", uid: "matchCount", sortable: true },
+  { name: "PARTICIPANTS", uid: "participants", sortable: true },
   { name: "ACTIONS", uid: "actions", sortable: false },
 ];
 
@@ -55,6 +66,7 @@ const INITIAL_VISIBLE_COLUMNS = [
   "endDate",
   "status",
   "matchCount",
+  "participants",
   "actions",
 ];
 
@@ -150,6 +162,10 @@ const UpsertModal = ({
   tournament: TournamentWithRelations | null;
 }) => {
   const isEdit = !!tournament;
+  const [decks, setDecks] = useState<DeckWithRelations[]>();
+  const [mappedDecksIdName, setMappedDecksIdName] = useState<
+    Map<number, string>
+  >(new Map());
   const [tournamentName, setTournamentName] = useState("");
   const [tournamentFormatId, setTournamentFormatId] = useState("");
   const [tournamentStartDate, setTournamentStartDate] = useState("");
@@ -158,9 +174,24 @@ const UpsertModal = ({
   const [tournamentLink, setTournamentLink] = useState("");
   const [loadingCreateTournament, setLoadingCreateTournament] = useState(false);
   const [tournamentNameInputError, setTournamentNameInputError] = useState("");
+  const [
+    tournamentParticipantsInputError,
+    setTournamentParticipantsInputError,
+  ] = useState("");
+  const [participantsTouched, setParticipantsTouched] = useState(false);
+  const [tournamentParticipants, setTournamentParticipants] =
+    useState<Selection>(new Set([]));
 
   useEffect(() => {
     handleReset();
+    getAllDecks().then((decks) => {
+      setDecks(decks);
+      const deckMap = new Map<number, string>();
+      decks.forEach((deck) => {
+        deckMap.set(deck.id, deck.name);
+      });
+      setMappedDecksIdName(deckMap);
+    });
   }, [isOpen, tournament]);
 
   const handleReset = () => {
@@ -177,6 +208,9 @@ const UpsertModal = ({
       );
       setTournamentNotes(tournament.notes || "");
       setTournamentLink(tournament.link || "");
+      setTournamentParticipants(
+        new Set(tournament.deckStats.map((ds) => ds.deckId.toString()))
+      );
     } else {
       setTournamentName("");
       setTournamentFormatId("");
@@ -184,8 +218,10 @@ const UpsertModal = ({
       setTournamentEndDate(new Date().toISOString().slice(0, 16));
       setTournamentNotes("");
       setTournamentLink("");
+      setTournamentParticipants(new Set([]));
     }
     setTournamentNameInputError("");
+    setParticipantsTouched(false);
   };
 
   const handleCreateTournament = () => {
@@ -197,6 +233,7 @@ const UpsertModal = ({
       endDate: tournamentEndDate ? new Date(tournamentEndDate) : undefined,
       notes: tournamentNotes || undefined,
       link: tournamentLink || undefined,
+      participants: Array.from(tournamentParticipants).map((p) => Number(p)),
     };
 
     const operation = isEdit
@@ -213,8 +250,14 @@ const UpsertModal = ({
       });
   };
 
+  const isTournamentParticipantsValid =
+    Array.from(tournamentParticipants).length >= 2;
+
   const isFormValid =
-    tournamentName.trim() && tournamentFormatId && tournamentStartDate;
+    tournamentName.trim() &&
+    tournamentFormatId &&
+    tournamentStartDate &&
+    isTournamentParticipantsValid;
 
   return (
     <Modal isOpen={isOpen} onOpenChange={onOpenChange} size="2xl">
@@ -290,6 +333,71 @@ const UpsertModal = ({
                   onChange={(e) => setTournamentLink(e.target.value)}
                 />
               </div>
+
+              <Select
+                label="Participants"
+                placeholder="Select all the participants"
+                isRequired
+                selectedKeys={tournamentParticipants}
+                onSelectionChange={(keys) => {
+                  setTournamentParticipants(keys);
+                  setParticipantsTouched(true);
+                  if (Array.from(keys).length >= 2) {
+                    setTournamentParticipantsInputError("");
+                  } else {
+                    setTournamentParticipantsInputError(
+                      "Please select at least two participants."
+                    );
+                  }
+                }}
+                onClear={() => {
+                  setTournamentParticipants(new Set([]));
+                  setTournamentParticipantsInputError(
+                    "Please select at least two participants."
+                  );
+                }}
+                isClearable
+                isDisabled={isEdit}
+                selectionMode="multiple"
+                isMultiline
+                errorMessage={tournamentParticipantsInputError}
+                isInvalid={
+                  participantsTouched && !isTournamentParticipantsValid
+                }
+                renderValue={(items) => (
+                  <div className="flex flex-wrap gap-2">
+                    {items.map((item) => (
+                      <Chip key={item.key}>
+                        {mappedDecksIdName.get(Number(item.key))}
+                      </Chip>
+                    ))}
+                  </div>
+                )}
+              >
+                {(tournamentFormatId
+                  ? decks?.filter(
+                      (deck) => deck.formatId === Number(tournamentFormatId)
+                    )!
+                  : []
+                ).map((deck) => (
+                  <SelectItem key={deck.id.toString()}>
+                    <div className="flex gap-2 items-center">
+                      <Avatar
+                        alt={deck.name}
+                        className="shrink-0"
+                        size="sm"
+                        src={deck.avatar ?? ""}
+                      />
+                      <div className="flex flex-col">
+                        <span className="text-small">{deck.name}</span>
+                        <span className="text-tiny text-default-400">
+                          {deck.archetype.name}
+                        </span>
+                      </div>
+                    </div>
+                  </SelectItem>
+                ))}
+              </Select>
 
               <Input
                 label="Notes (Optional)"
@@ -415,6 +523,10 @@ export default function TournamentsPage() {
         case "matchCount":
           return (
             <span className="text-small">{tournament.matches.length}</span>
+          );
+        case "participants":
+          return (
+            <span className="text-small">{tournament.deckStats.length}</span>
           );
         case "actions":
           return (

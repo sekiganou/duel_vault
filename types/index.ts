@@ -92,10 +92,9 @@ export type TournamentWithRelations = Tournament & {
 
 export type CardTabItem = {
   key: string;
-  maxCardHeightPx?: number;
   title: string;
   cardBody: React.ReactNode;
-  emptyContent?: {
+  emptyContent: {
     header: string;
     text: string;
     icon: React.ComponentType<{ size?: number; className?: string }>;
