@@ -54,7 +54,7 @@ model Tournament {
 
 model Match {
   id            Int       @id @default(autoincrement())
-  tournament    Tournament? @relation(fields: [tournamentId], references: [id])
+  tournament    Tournament? @relation(fields: [tournamentId], references: [id],  onDelete: SetNull)
   tournamentId  Int?
 
   deckA         Deck      @relation("DeckA", fields: [deckAId], references: [id])
@@ -110,60 +110,3 @@ model TournamentDeckStats {
   @@unique([tournamentId, deckId])
   @@map("tournament_deck_stats")
 }
-
-
-/*
-Decks
-- id
-- name
-- archetype_id
-- format_id
-- description (null)
-- active (bool)
-- wins
-- losses
-- ties
-- created_at
-- updated_at
-
-Tournaments
-- id
-- name
-- format_id
-- start_date
-- end_date (null)
-- notes (null)
-- link (null)
-- updated_at
-- created_at
-
-Matches
-- id
-- tournament_id (null if friendly match)
-- deck_a_id
-- deck_b_id
-- winner_id (null if tie)
-- deck_a_score (number)
-- deck_b_score (number)
-- notes (null)
-- date
-- updated_at
-- created_at
-
-Archetypes
-- id
-- name
-
-Formats
-- id
-- name
-
-TournamentDeckStats
-- id
-- tournament_id
-- deck_id
-- final_rank (number)
-- wins
-- losses
-- ties
-*/

@@ -2,7 +2,7 @@ services:
   db:
     image: postgres:latest
     restart: always
-    env_file: ".env.local"
+    env_file: ".env"
     volumes:
       - db_data:/var/lib/postgresql/data
     ports:
@@ -14,7 +14,7 @@ services:
     volumes:
       - s3_data:/var/lib/minio/data
     command: server /var/lib/minio/data --console-address ":9001"
-    env_file: ".env.local"
+    env_file: ".env"
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -23,13 +23,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
+    restart: always
     image: gitea.dojo-vernier.ts.net/duelvault:dev
     depends_on:
       - db
       - s3
     ports:
       - "3000:3000"
-    env_file: ".env.local"
+    env_file: ".env"
     volumes:
       - .:/app
 

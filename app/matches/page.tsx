@@ -14,6 +14,7 @@ import {
   MatchWithRelations,
   StatusOptionDescriptor,
   TableColumnDescriptor,
+  TournamentWithRelations,
 } from "@/types";
 import { Selection } from "@react-types/shared";
 
@@ -43,6 +44,7 @@ import { User } from "@heroui/user";
 import { getAllTournaments } from "@/lib/api/tournaments";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Avatar } from "@heroui/avatar";
 
 const columns: TableColumnDescriptor[] = [
   { name: "ID", uid: "id", sortable: true },
@@ -139,11 +141,14 @@ const UpsertModal = ({
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   decks: DeckWithRelations[];
-  tournaments: Tournament[];
+  tournaments: TournamentWithRelations[];
   handleGetAllMatches: () => Promise<void>;
   match: MatchWithRelations | null;
 }) => {
   const isEdit = !!match;
+  const mappedDecks: Map<number, DeckWithRelations> = new Map(
+    decks.map((deck) => [deck.id, deck])
+  );
   const [tournamentId, setTournamentId] = useState<string>("");
   const [deckAId, setDeckAId] = useState<string>("");
   const [deckBId, setDeckBId] = useState<string>("");
@@ -222,9 +227,14 @@ const UpsertModal = ({
                   label="Tournament (Optional)"
                   placeholder="Select a tournament"
                   selectedKeys={[tournamentId]}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                    setTournamentId(e.target.value)
-                  }
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                    setTournamentId(e.target.value);
+                    setDeckAId("");
+                    setDeckBId("");
+                    setWinnerId("");
+                    setDeckAScore("0");
+                    setDeckBScore("0");
+                  }}
                 >
                   {tournaments.map((tournament) => (
                     <SelectItem key={tournament.id.toString()}>
@@ -242,36 +252,140 @@ const UpsertModal = ({
                 />
 
                 <Select
-                  label="Deck A"
-                  placeholder="Select first deck"
+                  label="Select Deck A"
+                  // placeholder="Select first deck"
                   selectedKeys={[deckAId]}
                   onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                     setDeckAId(e.target.value)
                   }
+                  classNames={{
+                    label: "group-data-[filled=true]:-translate-y-4",
+                  }}
                   isRequired
+                  renderValue={(items) => (
+                    <div className="flex flex-wrap gap-2">
+                      {items.map((item) => (
+                        <div className="flex gap-2 items-center" key={item.key}>
+                          <Avatar
+                            alt={mappedDecks.get(Number(item.key))?.name}
+                            className="shrink-0"
+                            size="sm"
+                            src={
+                              mappedDecks.get(Number(item.key))?.avatar ?? ""
+                            }
+                          />
+                          <div className="flex flex-col">
+                            <span className="text-small">
+                              {mappedDecks.get(Number(item.key))?.name}
+                            </span>
+                            <span className="text-tiny text-default-400">
+                              {
+                                mappedDecks.get(Number(item.key))?.archetype
+                                  .name
+                              }
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 >
                   {decks
-                    .filter((deck) => deck.id.toString() !== deckBId)
+                    .filter(
+                      (deck) =>
+                        (tournamentId !== ""
+                          ? tournaments
+                              .find((t) => t.id === Number(tournamentId))
+                              ?.deckStats.map((ds) => ds.deckId)
+                              .includes(deck.id)
+                          : true) && deck.id.toString() !== deckBId
+                    )
                     .map((deck) => (
                       <SelectItem key={deck.id.toString()}>
-                        {getDeckName(deck)}
+                        <div className="flex gap-2 items-center">
+                          <Avatar
+                            alt={deck.name}
+                            className="shrink-0"
+                            size="sm"
+                            src={deck.avatar ?? ""}
+                          />
+                          <div className="flex flex-col">
+                            <span className="text-small">{deck.name}</span>
+                            <span className="text-tiny text-default-400">
+                              {deck.archetype.name}
+                            </span>
+                          </div>
+                        </div>
                       </SelectItem>
                     ))}
                 </Select>
 
                 <Select
-                  label="Deck B"
-                  placeholder="Select second deck"
+                  label="Select Deck B"
+                  // placeholder="Select second deck"
                   selectedKeys={[deckBId]}
                   onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                     setDeckBId(e.target.value)
                   }
+                  classNames={{
+                    label: "group-data-[filled=true]:-translate-y-4",
+                  }}
                   isRequired
+                  renderValue={(items) => (
+                    <div className="flex flex-wrap gap-2 ">
+                      {items.map((item) => (
+                        <div className="flex gap-2 items-center" key={item.key}>
+                          <Avatar
+                            alt={mappedDecks.get(Number(item.key))?.name}
+                            className="shrink-0"
+                            size="sm"
+                            src={
+                              mappedDecks.get(Number(item.key))?.avatar ?? ""
+                            }
+                          />
+                          <div className="flex flex-col">
+                            <span className="text-small">
+                              {mappedDecks.get(Number(item.key))?.name}
+                            </span>
+                            <span className="text-tiny text-default-400">
+                              {
+                                mappedDecks.get(Number(item.key))?.archetype
+                                  .name
+                              }
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 >
                   {decks
-                    .filter((deck) => deck.id.toString() !== deckAId)
+                    .filter(
+                      (deck) =>
+                        (tournamentId !== ""
+                          ? tournaments
+                              .find((t) => t.id === Number(tournamentId))
+                              ?.deckStats.map((ds) => ds.deckId)
+                              .includes(deck.id)
+                          : true) && deck.id.toString() !== deckAId
+                    )
                     .map((deck) => (
-                      <SelectItem key={deck.id}>{getDeckName(deck)}</SelectItem>
+                      <SelectItem key={deck.id.toString()}>
+                        <div className="flex gap-2 items-center">
+                          <Avatar
+                            alt={deck.name}
+                            className="shrink-0"
+                            size="sm"
+                            src={deck.avatar ?? ""}
+                          />
+                          <div className="flex flex-col">
+                            <span className="text-small">{deck.name}</span>
+                            <span className="text-tiny text-default-400">
+                              {deck.archetype.name}
+                            </span>
+                          </div>
+                        </div>
+                      </SelectItem>
                     ))}
                 </Select>
 
@@ -314,17 +428,63 @@ const UpsertModal = ({
                 <div className="md:col-span-2">
                   <Select
                     label="Winner (Optional)"
-                    placeholder="Select winner or leave empty for tie"
+                    // placeholder="Select winner or leave empty for tie"
+                    classNames={{
+                      label: "group-data-[filled=true]:-translate-y-4",
+                    }}
                     selectedKeys={[winnerId]}
                     onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                       setWinnerId(e.target.value)
                     }
+                    renderValue={(items) => (
+                      <div className="flex flex-wrap gap-2">
+                        {items.map((item) => (
+                          <div
+                            className="flex gap-2 items-center"
+                            key={item.key}
+                          >
+                            <Avatar
+                              alt={mappedDecks.get(Number(item.key))?.name}
+                              className="shrink-0"
+                              size="sm"
+                              src={
+                                mappedDecks.get(Number(item.key))?.avatar ?? ""
+                              }
+                            />
+                            <div className="flex flex-col">
+                              <span className="text-small">
+                                {mappedDecks.get(Number(item.key))?.name}
+                              </span>
+                              <span className="text-tiny text-default-400">
+                                {
+                                  mappedDecks.get(Number(item.key))?.archetype
+                                    .name
+                                }
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   >
                     {[deckAId, deckBId].filter(Boolean).map((id) => {
                       const deck = decks.find((d) => d.id.toString() === id);
                       return deck ? (
-                        <SelectItem key={deck.id}>
-                          {getDeckName(deck)}
+                        <SelectItem key={deck.id.toString()}>
+                          <div className="flex gap-2 items-center">
+                            <Avatar
+                              alt={deck.name}
+                              className="shrink-0"
+                              size="sm"
+                              src={deck.avatar ?? ""}
+                            />
+                            <div className="flex flex-col">
+                              <span className="text-small">{deck.name}</span>
+                              <span className="text-tiny text-default-400">
+                                {deck.archetype.name}
+                              </span>
+                            </div>
+                          </div>
                         </SelectItem>
                       ) : null;
                     })}
@@ -364,7 +524,7 @@ const UpsertModal = ({
 export default function MatchesPage() {
   const [matches, setMatches] = useState<MatchWithRelations[]>([]);
   const [decks, setDecks] = useState<DeckWithRelations[]>([]);
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [tournaments, setTournaments] = useState<TournamentWithRelations[]>([]);
   const [loadingMatches, setLoadingMatches] = useState(true);
   const [selectedMatch, setSelectedMatch] = useState<MatchWithRelations | null>(
     null

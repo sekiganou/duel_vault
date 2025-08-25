@@ -51,46 +51,37 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     );
   }
 
-  const { id, startDate, endDate, ...dataWithoutId } = parsed.data;
+  const { id, startDate, endDate, participants, ...dataWithoutId } =
+    parsed.data;
+
   const tournamentData = {
     ...dataWithoutId,
     startDate: new Date(startDate),
     endDate: endDate ? new Date(endDate) : null,
   };
 
-  const item = await db.tournament.upsert({
-    where: { id: id ? parseInt(id) : -1 },
-    create: tournamentData,
-    update: tournamentData,
-    include: {
-      format: true,
-      matches: {
-        include: {
-          deckA: {
-            include: {
-              archetype: true,
-              format: true,
-            },
-          },
-          deckB: {
-            include: {
-              archetype: true,
-              format: true,
-            },
-          },
-          winner: {
-            include: {
-              archetype: true,
-              format: true,
-            },
-          },
-        },
+  const ID = await db.$transaction(async (tx) => {
+    const tournament = await tx.tournament.create({
+      data: tournamentData,
+      select: {
+        id: true,
       },
-      deckStats: true,
-    },
+    });
+
+    await tx.tournamentDeckStats.createMany({
+      data: participants.map((participant) => ({
+        tournamentId: tournament.id,
+        deckId: participant,
+        wins: 0,
+        losses: 0,
+        ties: 0,
+      })),
+    });
+
+    return tournament.id;
   });
 
-  return NextResponse.json({ success: true, item: item });
+  return NextResponse.json({ success: true, createdId: ID });
 });
 
 export const DELETE = withErrorHandler(async (req: NextRequest) => {
@@ -118,23 +109,9 @@ export const DELETE = withErrorHandler(async (req: NextRequest) => {
   }
 
   // Use transaction to ensure data consistency when deleting
-  await db.$transaction(async (tx) => {
-    // Delete tournament deck stats first (due to foreign key constraints)
-    await tx.tournamentDeckStats.deleteMany({
-      where: { tournamentId: id },
-    });
 
-    // Update matches to remove tournament reference (set tournamentId to null)
-    // This preserves match history while removing tournament association
-    await tx.match.updateMany({
-      where: { tournamentId: id },
-      data: { tournamentId: null },
-    });
-
-    // Finally delete the tournament
-    await tx.tournament.delete({
-      where: { id },
-    });
+  await db.tournament.delete({
+    where: { id },
   });
 
   return NextResponse.json({ success: true, deletedId: id });

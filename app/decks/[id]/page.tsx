@@ -31,11 +31,7 @@ import {
 } from "@heroui/table";
 import { User } from "@heroui/user";
 import "@/lib/extensions/array";
-import { ScrollShadow } from "@heroui/scroll-shadow";
-import { Tab, Tabs } from "@heroui/tabs";
-import { useTheme } from "next-themes";
 import { CardTabs } from "@/components/cardTabs";
-import { CustomScrollShadow } from "@/components/customScrollShadow";
 
 export default function ViewDeckPage() {
   const { id } = useParams();
@@ -473,6 +469,115 @@ export default function ViewDeckPage() {
                                 router.push(
                                   `/tournaments/${stat.tournament?.id}`
                                 )
+                              }
+                            >
+                              View
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                </TableBody>
+              </Table>
+            ),
+          },
+          {
+            key: "all-matches",
+            title: "Matches",
+            emptyContent: {
+              header: "No Match Data",
+              text: "This deck hasn't participated in any matches yet.",
+              icon: (props) => <IconSwords {...props} />,
+              displayEmptyContent:
+                deck.matchesA.length === 0 && deck.matchesB.length === 0,
+            },
+            cardBody: (
+              <Table aria-label="Match Performance">
+                <TableHeader>
+                  <TableColumn>DATE</TableColumn>
+                  <TableColumn>OPPONENT DECK</TableColumn>
+                  <TableColumn>RESULT</TableColumn>
+                  <TableColumn>SCORE</TableColumn>
+                  <TableColumn>TOURNAMENT</TableColumn>
+                  <TableColumn>ACTION</TableColumn>
+                </TableHeader>
+                <TableBody>
+                  {allMatches
+                    .sort(
+                      (a, b) =>
+                        new Date(b.date).getTime() - new Date(a.date).getTime()
+                    )
+                    .map((match) => {
+                      const opponentDeck =
+                        match.deckA.id === deck.id ? match.deckB : match.deckA;
+                      const ownScore =
+                        match.deckA.id === deck.id
+                          ? match.deckAScore
+                          : match.deckBScore;
+                      const opponentScore =
+                        match.deckA.id === deck.id
+                          ? match.deckBScore
+                          : match.deckAScore;
+
+                      let result: string;
+                      let resultColor: "success" | "danger" | "warning";
+
+                      if (match.winnerId === deck.id) {
+                        result = "Win";
+                        resultColor = "success";
+                      } else if (match.winnerId === opponentDeck.id) {
+                        result = "Loss";
+                        resultColor = "danger";
+                      } else {
+                        result = "Tie";
+                        resultColor = "warning";
+                      }
+
+                      return (
+                        <TableRow key={match.id}>
+                          <TableCell>
+                            <span className="text-small">
+                              {new Date(match.date).toLocaleDateString()}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <User
+                              name={opponentDeck.name}
+                              description={opponentDeck.archetype.name}
+                              avatarProps={{
+                                src: opponentDeck.avatar || undefined,
+                                size: "sm",
+                                radius: "lg",
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Chip color={resultColor} variant="flat" size="sm">
+                              {result}
+                            </Chip>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-small">
+                              {ownScore} - {opponentScore}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            {match.tournament ? (
+                              <span className="text-small">
+                                {match.tournament.name}
+                              </span>
+                            ) : (
+                              <span className="text-small text-default-400">
+                                Friendly
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="light"
+                              size="sm"
+                              onPress={() =>
+                                router.push(`/matches/${match.id}`)
                               }
                             >
                               View
