@@ -76,7 +76,11 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const id = parseInt(pathSegments[pathSegments.length - 1]);
 
   const body = await req.json();
-  const parsed = UpsertTournamentSchema.omit({ id: true }).safeParse(body);
+  const parsed = UpsertTournamentSchema.omit({
+    id: true,
+    participants: true,
+  }).safeParse(body);
+
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid tournament data", issues: parsed.error.issues },

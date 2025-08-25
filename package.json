@@ -10,7 +10,6 @@
     "seed": "tsx ./prisma/seed.ts"
   },
   "dependencies": {
-    "@g-loot/react-tournament-brackets": "^1.0.31-rc",
     "@heroui/autocomplete": "^2.3.26",
     "@heroui/avatar": "^2.2.20",
     "@heroui/button": "2.2.24",
@@ -28,6 +27,7 @@
     "@heroui/navbar": "2.2.22",
     "@heroui/pagination": "^2.2.22",
     "@heroui/progress": "^2.2.20",
+    "@heroui/react": "^2.8.2",
     "@heroui/scroll-shadow": "^2.3.16",
     "@heroui/select": "^2.4.25",
     "@heroui/skeleton": "^2.2.15",

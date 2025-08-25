@@ -47,6 +47,7 @@ export async function createTournament(tournament: {
   endDate?: string | Date;
   notes?: string;
   link?: string;
+  participants: Array<number>;
 }) {
   try {
     const res = await axios.post(basePath, tournament);
@@ -72,9 +73,11 @@ export async function updateTournament(tournament: {
   endDate?: string | Date;
   notes?: string;
   link?: string;
+  participants: Array<number>;
 }) {
   try {
-    const res = await axios.post(`${basePath}/${tournament.id}`, tournament);
+    const { participants, ...data } = tournament;
+    const res = await axios.post(`${basePath}/${tournament.id}`, data);
     addToast({
       title: "Tournament updated successfully",
       color: "success",
