@@ -9,3 +9,5 @@ export const UpsertDeckSchema = z.object({
   active: z.boolean(),
   avatar: z.string().nullable(),
 });
+
+export const DeleteDecksSchema = z.array(z.number());

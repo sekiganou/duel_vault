@@ -7,6 +7,7 @@ import {
   deleteDeck,
   getDeckStatus,
   statusColorMap,
+  deleteDecks,
 } from "@/lib/api/decks";
 import {
   DeckWithRelations,
@@ -405,6 +406,7 @@ export default function DecksPage() {
   const [selectedDeck, setSelectedDeck] = useState<DeckWithRelations | null>(
     null
   );
+  const [deletingDecks, setDeletingDecks] = useState(false);
   const router = useRouter();
   const {
     isOpen: isOpenCreateModal,
@@ -428,6 +430,17 @@ export default function DecksPage() {
       .finally(() => {
         setLoadingDecks(false);
       });
+
+  const handleDeleteDecks = (keys: Set<number>) => {
+    setDeletingDecks(true);
+    deleteDecks(Array.from(keys.values().map((k) => Number(k))))
+      .then(() => {
+        handleGetAllDecks();
+      })
+      .finally(() => {
+        setDeletingDecks(false);
+      });
+  };
 
   const handleGetAllArchetypes = () => getAllArchetypes().then(setArchetypes);
 
@@ -546,11 +559,13 @@ export default function DecksPage() {
         statusOptions={statusOptions}
         items={decks}
         loadingItems={loadingDecks}
+        deletingItems={deletingDecks}
         renderCell={renderCell}
         getStatus={getDeckStatus}
         onOpenCreateModal={onOpenCreateModal}
         searchFilter={searchFilter}
         getItemKey={(deck: DeckWithRelations) => deck.id}
+        handleDeleteItems={handleDeleteDecks}
       />
 
       <UpsertModal

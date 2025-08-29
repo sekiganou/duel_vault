@@ -1,6 +1,9 @@
 import axios from "axios";
 import { size, z } from "zod";
-import { UpsertDeckSchema } from "../schemas/decks";
+import {
+  DeleteDecksSchema as DeleteDecksSchema,
+  UpsertDeckSchema,
+} from "../schemas/decks";
 import { DeckWithRelations } from "@/types";
 import { getMinioClient, S3_BUCKET } from "@/s3";
 import { addToast } from "@heroui/toast";
@@ -131,6 +134,27 @@ export async function deleteDeck(id: number, avatar: string | null) {
     addToast({
       title: `Failed to delete deck. Please try again`,
       description: "This deck may be associated with matches or tournaments.",
+      color: "danger",
+    });
+    return;
+  }
+}
+
+export async function deleteDecks(ids: number[]) {
+  try {
+    console.log("lib/api/deleteDecks.ids: ", ids);
+    const parsedIds = DeleteDecksSchema.parse(ids);
+    await axios.delete(`${basePath}`, { data: parsedIds });
+
+    addToast({
+      title: `Decks deleted successfully!`,
+      color: "success",
+    });
+  } catch (error) {
+    console.error("Error deleting decks:", error);
+    addToast({
+      title: `Failed to delete decks. Please try again`,
+      description: "These decks may be associated with matches or tournaments.",
       color: "danger",
     });
     return;
