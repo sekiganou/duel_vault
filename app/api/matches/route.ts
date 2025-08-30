@@ -1,87 +1,14 @@
 import { db } from "@/db";
+import {
+  getStatDecrements,
+  updateTournamentDeckStats,
+} from "@/lib/api/matches";
 import { withErrorHandler } from "@/lib/middlewares/withErrorHandler";
-import { UpsertMatchSchema } from "@/lib/schemas/matches";
-import { DeckWithRelations } from "@/types";
-import { match } from "assert";
+import { DeleteMatchesSchema, UpsertMatchSchema } from "@/lib/schemas/matches";
 import { NextRequest, NextResponse } from "next/server";
 import z from "zod";
-import { fi } from "zod/v4/locales/index.cjs";
 
 type MatchResult = "win" | "loss" | "tie";
-type PrismaTransaction = Parameters<Parameters<typeof db.$transaction>[0]>[0];
-
-// Shared tournament stats update logic
-const updateTournamentDeckStats = async (
-  tx: PrismaTransaction,
-  tournamentId: number,
-  deckId: number
-) => {
-  const [tournament, deck] = await Promise.all([
-    tx.tournament.findUnique({
-      where: { id: tournamentId },
-      include: { matches: true },
-    }),
-    tx.deck.findUnique({ where: { id: deckId } }),
-  ]);
-
-  if (!tournament || !deck) return;
-
-  // Only count matches where this deck actually participated
-  const deckMatches = tournament.matches.filter(
-    (match: { deckAId: number; deckBId: number; winnerId: number | null }) =>
-      match.deckAId === deckId || match.deckBId === deckId
-  );
-
-  const wins = deckMatches.reduce(
-    (acc: number, match: { winnerId: number | null }) =>
-      acc + (match.winnerId === deckId ? 1 : 0),
-    0
-  );
-
-  const losses = deckMatches.reduce(
-    (acc: number, match: { winnerId: number | null }) =>
-      acc + (match.winnerId && match.winnerId !== deckId ? 1 : 0),
-    0
-  );
-
-  const ties = deckMatches.reduce(
-    (acc: number, match: { winnerId: number | null }) =>
-      acc + (match.winnerId === null ? 1 : 0),
-    0
-  );
-
-  if (wins === 0 && losses === 0 && ties === 0) {
-    // Delete stats if deck has no matches in this tournament
-    await tx.tournamentDeckStats.deleteMany({
-      where: {
-        tournamentId: tournament.id,
-        deckId: deck.id,
-      },
-    });
-  } else {
-    // Update stats with recalculated values
-    await tx.tournamentDeckStats.upsert({
-      where: {
-        tournamentId_deckId: {
-          tournamentId: tournament.id,
-          deckId: deck.id,
-        },
-      },
-      create: {
-        wins: wins,
-        losses: losses,
-        ties: ties,
-        tournamentId: tournament.id,
-        deckId: deck.id,
-      },
-      update: {
-        wins: wins,
-        losses: losses,
-        ties: ties,
-      },
-    });
-  }
-};
 
 // Helper to determine match results for both decks
 const getMatchResults = (
@@ -308,17 +235,22 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 });
 
 export const DELETE = withErrorHandler(async (req: NextRequest) => {
-  const { searchParams } = new URL(req.url);
-  const id = parseInt(searchParams.get("id") || "");
+  const body = await req.json();
+  const parsed = DeleteMatchesSchema.safeParse(body);
 
-  if (isNaN(id)) {
-    return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Invalid ID(s)", details: parsed.error },
+      { status: 400 }
+    );
   }
+
+  const ids = parsed.data;
 
   await db.$transaction(async (tx) => {
     // Get match details before deletion to update deck stats
-    const match = await tx.match.findUnique({
-      where: { id },
+    const matches = await tx.match.findMany({
+      where: { id: { in: ids } },
       include: {
         deckA: {
           select: { id: true, wins: true, losses: true, ties: true },
@@ -329,57 +261,51 @@ export const DELETE = withErrorHandler(async (req: NextRequest) => {
       },
     });
 
-    if (!match) {
-      throw new Error("Match not found");
+    if (!matches || matches.length === 0) {
+      throw new Error("Matches not found");
     }
 
-    const { deckAId, deckBId, winnerId, tournamentId } = match;
+    for (const match of matches) {
+      const { id, deckAId, deckBId, winnerId, tournamentId } = match;
 
-    // Calculate stat decrements for deck stats
-    const getStatDecrements = (
-      deckId: number,
-      wins: number,
-      losses: number,
-      ties: number
-    ) => {
-      if (winnerId === deckId)
-        return { wins: { decrement: wins === 0 ? 0 : 1 } };
-      if (winnerId && winnerId !== deckId)
-        return { losses: { decrement: losses === 0 ? 0 : 1 } };
-      return { ties: { decrement: ties === 0 ? 0 : 1 } };
-    };
+      // Calculate stat decrements for deck stats
+      const deckADecrements = getStatDecrements(
+        winnerId,
+        deckAId,
+        match.deckA.wins,
+        match.deckA.losses,
+        match.deckA.ties
+      );
+      const deckBDecrements = getStatDecrements(
+        winnerId,
+        deckBId,
+        match.deckB.wins,
+        match.deckB.losses,
+        match.deckB.ties
+      );
 
-    // Update deck stats and delete match in parallel
-    await Promise.all([
-      tx.deck.update({
-        where: { id: deckAId },
-        data: getStatDecrements(
-          deckAId,
-          match.deckA.wins,
-          match.deckA.losses,
-          match.deckA.ties
-        ),
-      }),
-      tx.deck.update({
-        where: { id: deckBId },
-        data: getStatDecrements(
-          deckBId,
-          match.deckB.wins,
-          match.deckB.losses,
-          match.deckB.ties
-        ),
-      }),
-      tx.match.delete({ where: { id } }),
-    ]);
-
-    // Recalculate tournament stats if match was part of a tournament
-    if (tournamentId) {
+      // Update deck stats and delete match in parallel
       await Promise.all([
-        updateTournamentDeckStats(tx, tournamentId, deckAId),
-        updateTournamentDeckStats(tx, tournamentId, deckBId),
+        tx.deck.update({
+          where: { id: deckAId },
+          data: deckADecrements,
+        }),
+        tx.deck.update({
+          where: { id: deckBId },
+          data: deckBDecrements,
+        }),
+        tx.match.delete({ where: { id: id } }),
       ]);
+
+      // Recalculate tournament stats if match was part of a tournament
+      if (tournamentId) {
+        await Promise.all([
+          updateTournamentDeckStats(tx, tournamentId, deckAId),
+          updateTournamentDeckStats(tx, tournamentId, deckBId),
+        ]);
+      }
     }
   });
 
-  return NextResponse.json({ success: true, deletedId: id });
+  return NextResponse.json({ success: true, ids });
 });

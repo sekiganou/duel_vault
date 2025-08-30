@@ -142,7 +142,6 @@ export async function deleteDeck(id: number, avatar: string | null) {
 
 export async function deleteDecks(ids: number[]) {
   try {
-    console.log("lib/api/deleteDecks.ids: ", ids);
     const parsedIds = DeleteDecksSchema.parse(ids);
     await axios.delete(`${basePath}`, { data: parsedIds });
 
