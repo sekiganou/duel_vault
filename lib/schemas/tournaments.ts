@@ -12,3 +12,5 @@ export const UpsertTournamentSchema = z.object({
     .array(z.number())
     .min(2, "At least 2 partecipants are required"),
 });
+
+export const DeleteTournamentsSchema = z.array(z.number());

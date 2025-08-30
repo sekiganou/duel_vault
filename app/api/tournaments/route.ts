@@ -1,6 +1,9 @@
 import { db } from "@/db";
 import { withErrorHandler } from "@/lib/middlewares/withErrorHandler";
-import { UpsertTournamentSchema } from "@/lib/schemas/tournaments";
+import {
+  DeleteTournamentsSchema,
+  UpsertTournamentSchema,
+} from "@/lib/schemas/tournaments";
 import { NextRequest, NextResponse } from "next/server";
 import z from "zod";
 
@@ -85,34 +88,21 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 });
 
 export const DELETE = withErrorHandler(async (req: NextRequest) => {
-  const { searchParams } = new URL(req.url);
-  const id = parseInt(searchParams.get("id") || "");
+  const body = await req.json();
+  const parsed = DeleteTournamentsSchema.safeParse(body);
 
-  if (isNaN(id)) {
-    return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
-  }
-
-  // Check if tournament exists
-  const tournament = await db.tournament.findUnique({
-    where: { id },
-    include: {
-      matches: true,
-      deckStats: true,
-    },
-  });
-
-  if (!tournament) {
+  if (!parsed.success) {
     return NextResponse.json(
-      { error: "Tournament not found" },
-      { status: 404 }
+      { error: "Invalid ID(s)", details: parsed.error },
+      { status: 400 }
     );
   }
 
-  // Use transaction to ensure data consistency when deleting
+  const ids = parsed.data;
 
-  await db.tournament.delete({
-    where: { id },
+  await db.tournament.deleteMany({
+    where: { id: { in: ids } },
   });
 
-  return NextResponse.json({ success: true, deletedId: id });
+  return NextResponse.json({ success: true, IDS: ids });
 });

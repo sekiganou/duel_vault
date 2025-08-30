@@ -2,6 +2,7 @@ import axios from "axios";
 import { TournamentWithRelations } from "@/types";
 import { addToast } from "@heroui/toast";
 import { getAvatarUrl } from "./avatarCache";
+import { DeleteTournamentsSchema } from "../schemas/tournaments";
 
 const basePath = "/api/tournaments";
 
@@ -106,5 +107,23 @@ export async function deleteTournament(id: number) {
       color: "danger",
     });
     console.error("Error deleting tournament:", error);
+  }
+}
+
+export async function deleteTournaments(ids: number[]) {
+  try {
+    const parsedIds = DeleteTournamentsSchema.parse(ids);
+    await axios.delete(`${basePath}`, { data: parsedIds });
+
+    addToast({
+      title: `Tournaments deleted successfully!`,
+      color: "success",
+    });
+  } catch (error) {
+    console.error("Error deleting tournaments:", error);
+    addToast({
+      title: `Failed to delete tournaments. Please try again`,
+      color: "danger",
+    });
   }
 }

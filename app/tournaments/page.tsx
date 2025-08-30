@@ -6,6 +6,7 @@ import {
   updateTournament,
   getAllTournaments,
   deleteTournament,
+  deleteTournaments,
 } from "@/lib/api/tournaments";
 import { getAllFormats } from "@/lib/api/formats";
 import {
@@ -21,7 +22,13 @@ import {
   DropdownMenu,
   DropdownTrigger,
 } from "@heroui/dropdown";
-import { ChangeEventHandler, useCallback, useEffect, useState } from "react";
+import {
+  ChangeEventHandler,
+  use,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import { Button } from "@heroui/button";
 import { Chip, ChipProps } from "@heroui/chip";
 import { IconDotsVertical } from "@tabler/icons-react";
@@ -434,6 +441,7 @@ export default function TournamentsPage() {
   const [tournaments, setTournaments] = useState<TournamentWithRelations[]>([]);
   const [formats, setFormats] = useState<Format[]>([]);
   const [loadingTournaments, setLoadingTournaments] = useState(true);
+  const [deletingTournaments, setDeletingTournaments] = useState(false);
   const [selectedTournament, setSelectedTournament] =
     useState<TournamentWithRelations | null>(null);
   const router = useRouter();
@@ -460,6 +468,13 @@ export default function TournamentsPage() {
       .finally(() => {
         setLoadingTournaments(false);
       });
+
+  const handleDeleteTournaments = (keys: Set<number>) => {
+    setDeletingTournaments(true);
+    deleteTournaments(Array.from(keys.values().map((k) => Number(k))))
+      .then(() => handleGetAllTournaments())
+      .finally(() => setDeletingTournaments(false));
+  };
 
   useEffect(() => {
     async function fetchData() {
@@ -589,6 +604,7 @@ export default function TournamentsPage() {
         statusOptions={statusOptions}
         items={tournaments}
         loadingItems={loadingTournaments}
+        deletingItems={deletingTournaments}
         renderCell={renderCell}
         getStatus={getTournamentStatus}
         onOpenCreateModal={onOpenCreateModal}
@@ -602,6 +618,7 @@ export default function TournamentsPage() {
             .includes(filterValue.toLowerCase())
         }
         getItemKey={(tournament: TournamentWithRelations) => tournament.id}
+        handleDeleteItems={handleDeleteTournaments}
       />
 
       <UpsertModal
