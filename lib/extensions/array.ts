@@ -44,7 +44,7 @@ Array.prototype.sortByWinRate = function <T>(
     const winRateA = winsA / (winsA + lossesA || 1);
     const winRateB = winsB / (winsB + lossesB || 1);
 
-    return winRateB - winRateA;
+    return winRateB - winRateA || winsB - winsA;
   });
 };
 

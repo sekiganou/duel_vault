@@ -280,10 +280,10 @@ const UpsertModal = ({
                               {mappedDecks.get(Number(item.key))?.name}
                             </span>
                             <span className="text-tiny text-default-400">
-                              {
-                                mappedDecks.get(Number(item.key))?.archetype
-                                  .name
-                              }
+                              {mappedDecks.get(Number(item.key))?.archetype
+                                .name +
+                                " • " +
+                                mappedDecks.get(Number(item.key))?.format.name}
                             </span>
                           </div>
                         </div>
@@ -313,7 +313,7 @@ const UpsertModal = ({
                           <div className="flex flex-col">
                             <span className="text-small">{deck.name}</span>
                             <span className="text-tiny text-default-400">
-                              {deck.archetype.name}
+                              {deck.archetype.name + " • " + deck.format.name}
                             </span>
                           </div>
                         </div>
@@ -349,10 +349,10 @@ const UpsertModal = ({
                               {mappedDecks.get(Number(item.key))?.name}
                             </span>
                             <span className="text-tiny text-default-400">
-                              {
-                                mappedDecks.get(Number(item.key))?.archetype
-                                  .name
-                              }
+                              {mappedDecks.get(Number(item.key))?.archetype
+                                .name +
+                                " • " +
+                                mappedDecks.get(Number(item.key))?.format.name}
                             </span>
                           </div>
                         </div>
@@ -382,7 +382,7 @@ const UpsertModal = ({
                           <div className="flex flex-col">
                             <span className="text-small">{deck.name}</span>
                             <span className="text-tiny text-default-400">
-                              {deck.archetype.name}
+                              {deck.archetype.name + " • " + deck.format.name}
                             </span>
                           </div>
                         </div>

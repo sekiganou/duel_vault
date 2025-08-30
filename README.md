@@ -1,6 +1,6 @@
 # Duel Vault
 
-A comprehensive deck management and tournament tracking application for trading card games. Built with Next.js 14 and HeroUI v2, Duel Vault helps players organize their decks, track match results, and manage tournament data.
+A comprehensive deck management and tournament tracking application for trading card games. Built with Next.js 15 and HeroUI v2, Duel Vault helps players organize their decks, track match results, and manage tournament data.
 
 ## Features
 
@@ -14,7 +14,7 @@ A comprehensive deck management and tournament tracking application for trading 
 
 ## Technologies Used
 
-- **Frontend**: [Next.js 14](https://nextjs.org/) with App Router
+- **Frontend**: [Next.js 15](https://nextjs.org/) with App Router
 - **UI Library**: [HeroUI v2](https://heroui.com/) with [Tailwind CSS](https://tailwindcss.com/)
 - **Database**: [PostgreSQL](https://www.postgresql.org/) with [Prisma ORM](https://www.prisma.io/)
 - **File Storage**: [MinIO](https://min.io/) S3-compatible object storage
@@ -39,17 +39,13 @@ A comprehensive deck management and tournament tracking application for trading 
 1. **Clone the repository**
 
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/your-username/duel_vault.git
    cd duel_vault
    ```
 
 2. **Set up environment variables**
 
-   ```bash
-   cp .env.example .env.local
-   ```
-
-   Edit `.env.local` with your configuration:
+   Create a `.env.local` file in the root directory with your configuration:
 
    ```env
    # Database
@@ -83,7 +79,7 @@ A comprehensive deck management and tournament tracking application for trading 
 
    ```bash
    # Run database migrations
-   make migrate MIGRATION=init
+   npx prisma migrate dev --name init
 
    # Seed initial data
    npm run seed
@@ -130,8 +126,12 @@ duel_vault/
 │   │   ├── archetypes/    # Archetype management
 │   │   ├── decks/         # Deck CRUD operations
 │   │   ├── formats/       # Format management
+│   │   ├── matches/       # Match management
+│   │   ├── tournaments/   # Tournament management
 │   │   └── minio/         # File upload handling
 │   ├── decks/             # Deck management pages
+│   ├── matches/           # Match management pages
+│   ├── tournaments/       # Tournament management pages
 │   └── page.tsx           # Home page
 ├── components/            # Reusable UI components
 ├── lib/                   # Utilities and schemas
@@ -156,7 +156,8 @@ duel_vault/
 
 - `make up` - Start all services
 - `make down` - Stop all services
-- `make build` - Rebuild Docker images
+- `make build` - Rebuild Docker images for development
+- `make build-prod` - Build production Docker image
 - `make restart` - Restart all services
 - `make migrate MIGRATION=<name>` - Create and run database migration
 - `make prune` - Clean up Docker system
@@ -178,6 +179,8 @@ The application uses the following main entities:
 - `DELETE /api/decks?id=<id>` - Delete deck
 - `GET/POST /api/archetypes` - Archetype management
 - `GET/POST /api/formats` - Format management
+- `GET/POST /api/tournaments` - Tournament management
+- `GET/POST /api/matches` - Match management
 - `POST /api/minio/upload` - File upload
 - `DELETE /api/minio/delete` - File deletion
 
