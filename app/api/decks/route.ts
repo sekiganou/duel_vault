@@ -13,6 +13,7 @@ export const GET = withErrorHandler(async () => {
       archetype: true,
       format: true,
     },
+    orderBy: { name: "asc" },
   });
 
   // Note: Avatar URLs should be managed through the avatar-cache API
