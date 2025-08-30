@@ -5,9 +5,11 @@ import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Chip } from "@heroui/chip";
 import { User } from "@heroui/user";
 import { Button } from "@heroui/button";
+import { Tabs, Tab } from "@heroui/tabs";
 import { use, useEffect, useState } from "react";
 import { getAllDecks } from "@/lib/api/decks";
 import { getAllMatches } from "@/lib/api/matches";
+import { getAllFormats } from "@/lib/api/formats";
 import {
   DeckWithRelations,
   MatchWithRelations,
@@ -26,26 +28,36 @@ import { Skeleton } from "@heroui/skeleton";
 import { getAllTournaments } from "@/lib/api/tournaments";
 import { Image } from "@heroui/image";
 import { useTheme } from "next-themes";
+import { Format } from "@/generated/prisma";
 import "@/lib/extensions/array";
+
+const MAX_ELEMENTS = 5;
 
 export default function Home() {
   const [decks, setDecks] = useState<DeckWithRelations[]>([]);
   const [matches, setMatches] = useState<MatchWithRelations[]>([]);
   const [tournaments, setTournaments] = useState<TournamentWithRelations[]>([]);
+  const [formats, setFormats] = useState<Format[]>([]);
+  const [selectedFormatId, setSelectedFormatId] = useState<number | "all">(
+    "all"
+  );
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [decksData, matchesData, tournamentsData] = await Promise.all([
-          getAllDecks(),
-          getAllMatches(),
-          getAllTournaments(),
-        ]);
+        const [decksData, matchesData, tournamentsData, formatsData] =
+          await Promise.all([
+            getAllDecks(),
+            getAllMatches(),
+            getAllTournaments(),
+            getAllFormats(),
+          ]);
         setDecks(decksData);
         setMatches(matchesData);
         setTournaments(tournamentsData);
+        setFormats(formatsData);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
       } finally {
@@ -56,33 +68,39 @@ export default function Home() {
     fetchData();
   }, []);
 
+  // Filter data based on selected format
+  const filteredDecks =
+    selectedFormatId === "all"
+      ? decks
+      : decks.filter((deck) => deck.format.id === selectedFormatId);
+
+  const filteredMatches =
+    selectedFormatId === "all"
+      ? matches
+      : matches.filter(
+          (match) =>
+            match.deckA.format.id === selectedFormatId ||
+            match.deckB.format.id === selectedFormatId
+        );
+
+  const filteredTournaments =
+    selectedFormatId === "all"
+      ? tournaments
+      : tournaments.filter(
+          (tournament) => tournament.format.id === selectedFormatId
+        );
+
   // Calculate statistics
-  const totalDecks = decks.length;
-  const activeDecks = decks.filter((deck) => deck.active).length;
-  const totalMatches = matches.length;
-  const totalTournaments = tournaments.length;
-  const recentMatches = matches.slice(0, 5);
-
-  const totalWins = decks.reduce((sum, deck) => sum + deck.wins, 0);
-  const totalLosses = decks.reduce((sum, deck) => sum + deck.losses, 0);
-  const totalTies = decks.reduce((sum, deck) => sum + deck.ties, 0);
-  const winRate =
-    totalWins + totalLosses + totalTies > 0
-      ? Math.round((totalWins / (totalWins + totalLosses + totalTies)) * 100)
-      : 0;
-
-  // Get top performing deck
-  const topDeck = decks.reduce((best, deck) => {
-    const bestWinRate =
-      best.wins + best.losses + best.ties > 0
-        ? best.wins / (best.wins + best.losses + best.ties)
-        : 0;
-    const deckWinRate =
-      deck.wins + deck.losses + deck.ties > 0
-        ? deck.wins / (deck.wins + deck.losses + deck.ties)
-        : 0;
-    return deckWinRate > bestWinRate ? deck : best;
-  }, decks[0]);
+  const totalDecks = filteredDecks.length;
+  const activeDecks = filteredDecks.filter((deck) => deck.active).length;
+  const totalMatches = filteredMatches.length;
+  const totalTournaments = filteredTournaments.length;
+  const recentMatches = filteredMatches.slice(0, MAX_ELEMENTS);
+  const decksSortedByWinRate = filteredDecks.sortByWinRate(
+    (deck) => deck.wins,
+    (deck) => deck.losses
+  );
+  const topDeck = decksSortedByWinRate[0];
 
   const formatDate = (date: string | Date) => {
     const dateObj = typeof date === "string" ? new Date(date) : date;
@@ -92,15 +110,6 @@ export default function Home() {
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
-
-  const getMatchResult = (
-    match: MatchWithRelations,
-    deck: DeckWithRelations
-  ) => {
-    if (!match.winnerId) return "tie";
-    if (match.winnerId === deck.id) return "win";
-    return "loss";
   };
 
   const getResultColor = (result: string) => {
@@ -144,6 +153,22 @@ export default function Home() {
         </p>
       </div>
 
+      {/* Format Tabs */}
+      <div className="mb-6">
+        <Tabs
+          selectedKey={selectedFormatId.toString()}
+          onSelectionChange={(key) =>
+            setSelectedFormatId(key === "all" ? "all" : parseInt(key as string))
+          }
+          variant="underlined"
+        >
+          <Tab key="all" title="All Formats" />
+          {formats.map((format) => (
+            <Tab key={format.id.toString()} title={format.name} />
+          ))}
+        </Tabs>
+      </div>
+
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Card className="p-4">
@@ -176,13 +201,6 @@ export default function Home() {
             <div className="p-3 rounded-lg bg-success-100">
               <IconTrophy className="text-success" size={24} />
             </div>
-            {/* <div>
-              <p className="text-2xl font-bold">{winRate}%</p>
-              <p className="text-small text-default-500">Win Rate</p>
-              <p className="text-tiny text-default-400">
-                {totalWins}W {totalLosses}L {totalTies}T
-              </p>
-            </div> */}
             <div>
               <p className="text-2xl font-bold">{totalTournaments}</p>
               <p className="text-small text-default-500">Total Tournaments</p>
@@ -243,7 +261,10 @@ export default function Home() {
                         {match.deckA.name} vs {match.deckB.name}
                       </p>
                       <p className="text-tiny text-default-400">
-                        {formatDate(match.date)}
+                        {formatDate(match.date) +
+                          (selectedFormatId === "all"
+                            ? " • " + match.deckA.format.name
+                            : "")}
                       </p>
                     </div>
                   </div>
@@ -296,63 +317,51 @@ export default function Home() {
             </Button>
           </CardHeader>
           <CardBody className="gap-3">
-            {decks
-              .filter((deck) => deck.wins + deck.losses + deck.ties > 0)
-              .sortByWinsAndLosses(
-                (deck) => deck.wins,
-                (deck) => deck.losses
-              )
-              // .sort((a, b) => {
-              //   if (b.wins !== a.wins) {
-              //     return b.wins - a.wins;
-              //   }
-              //   return a.losses - b.losses;
-              // })
-              .slice(0, 5)
-              .map((deck) => {
-                const deckWinRate = Math.round(
-                  (deck.wins / (deck.wins + deck.losses + deck.ties)) * 100
-                );
-                return (
-                  <div
-                    key={deck.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-default-50"
-                  >
-                    <User
-                      avatarProps={{
-                        radius: "sm",
-                        src: deck.avatar || undefined,
-                        showFallback: true,
-                        size: "sm",
-                      }}
-                      name={deck.name}
-                      description={deck.archetype.name}
-                      classNames={{
-                        name: "text-small font-medium",
-                        description: "text-tiny",
-                      }}
-                    />
-                    <div className="text-right ml-auto">
-                      <p className="text-small font-bold text-success">
-                        {deckWinRate}%
-                      </p>
-                      <p className="text-tiny text-default-400">
-                        {deck.wins}W {deck.losses}L {deck.ties}T
-                      </p>
-                    </div>
-                    <Button
-                      onPress={() => router.push(`/decks/${deck.id}`)}
-                      variant="light"
-                      size="sm"
-                      className="ml-3"
-                    >
-                      View
-                    </Button>
+            {decksSortedByWinRate.slice(0, MAX_ELEMENTS).map((deck) => {
+              const deckWinRate = Math.round(
+                (deck.wins / (deck.wins + deck.losses + deck.ties)) * 100
+              );
+              return (
+                <div
+                  key={deck.id}
+                  className="flex items-center justify-between p-3 rounded-lg bg-default-50"
+                >
+                  <User
+                    avatarProps={{
+                      radius: "sm",
+                      src: deck.avatar || undefined,
+                      showFallback: true,
+                      size: "sm",
+                    }}
+                    name={deck.name}
+                    description={`${deck.archetype.name}${selectedFormatId === "all" ? " • " + deck.format.name : ""}`}
+                    classNames={{
+                      name: "text-small font-medium",
+                      description: "text-tiny",
+                    }}
+                  />
+                  <div className="text-right ml-auto">
+                    <p className="text-small font-bold text-success">
+                      {deckWinRate}%
+                    </p>
+                    <p className="text-tiny text-default-400">
+                      {deck.wins}W {deck.losses}L {deck.ties}T
+                    </p>
                   </div>
-                );
-              })}
-            {decks.filter((deck) => deck.wins + deck.losses + deck.ties > 0)
-              .length === 0 && (
+                  <Button
+                    onPress={() => router.push(`/decks/${deck.id}`)}
+                    variant="light"
+                    size="sm"
+                    className="ml-3"
+                  >
+                    View
+                  </Button>
+                </div>
+              );
+            })}
+            {filteredDecks.filter(
+              (deck) => deck.wins + deck.losses + deck.ties > 0
+            ).length === 0 && (
               <p className="text-default-400 text-center py-4">
                 No match data available
               </p>
@@ -377,15 +386,15 @@ export default function Home() {
           </Button>
         </CardHeader>
         <CardBody className="gap-3">
-          {tournaments.length > 0 ? (
-            tournaments
+          {filteredTournaments.length > 0 ? (
+            filteredTournaments
               .sort((a, b) => {
                 return (
                   new Date(b.startDate).getTime() -
                   new Date(a.startDate).getTime()
                 );
               })
-              .slice(0, 5)
+              .slice(0, MAX_ELEMENTS)
               .map((tournament) => (
                 <div
                   key={tournament.id}
@@ -420,13 +429,6 @@ export default function Home() {
                     >
                       View
                     </Button>
-                    {/* <Button
-                      size="sm"
-                      variant="light"
-                      onPress={() => router.push(tournament.link || "#")}
-                    >
-                      View External
-                    </Button> */}
                   </div>
                 </div>
               ))

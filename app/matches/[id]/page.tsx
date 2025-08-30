@@ -144,11 +144,6 @@ export default function ViewMatchPage() {
   const isWinnerB = winner?.id === match.deckB.id;
   const isDraw = !winner;
   const iconColor = status === "friendly" ? "text-secondary" : "text-primary";
-  const isCurrentDeckAInHistorical = (historicalMatch: MatchWithRelations) =>
-    historicalMatch.deckA.id === match.deckA.id;
-  const isCurrentDeckBInHistorical = (historicalMatch: MatchWithRelations) =>
-    historicalMatch.deckB.id === match.deckB.id;
-
   // Calculate historical matchup statistics
   const calculateHistoricalStats = () => {
     if (historicalMatches.length === 0) {
@@ -277,6 +272,9 @@ export default function ViewMatchPage() {
                 {match.tournament.name}
               </Link>
             )}
+            <span className="text-small text-default-500">
+              {match.deckA.format.name}
+            </span>
           </div>
         </div>
       </div>
@@ -305,7 +303,7 @@ export default function ViewMatchPage() {
               >
                 <User
                   name={match.deckA.name}
-                  description={`${match.deckA.archetype.name} • ${match.deckA.format.name}`}
+                  description={`${match.deckA.archetype.name}`}
                   avatarProps={{
                     src: match.deckA.avatar || undefined,
                     size: "lg",
@@ -335,7 +333,7 @@ export default function ViewMatchPage() {
               >
                 <User
                   name={match.deckB.name}
-                  description={`${match.deckB.archetype.name} • ${match.deckB.format.name}`}
+                  description={`${match.deckB.archetype.name}`}
                   avatarProps={{
                     src: match.deckB.avatar || undefined,
                     size: "lg",
@@ -414,15 +412,15 @@ export default function ViewMatchPage() {
               </div>
             </div>
 
-            {match.notes && <div className="flex items-center gap-3">
-              <IconNotes size={20} className="text-default-400 shrink-0" />
-              <div>
-                <p className="text-small text-default-500">Notes</p>
-                <p className="text-small italic">
-                  {match.notes}
-                </p>
+            {match.notes && (
+              <div className="flex items-center gap-3">
+                <IconNotes size={20} className="text-default-400 shrink-0" />
+                <div>
+                  <p className="text-small text-default-500">Notes</p>
+                  <p className="text-small italic">{match.notes}</p>
+                </div>
               </div>
-            </div>}
+            )}
           </CardBody>
         </Card>
 
@@ -459,14 +457,13 @@ export default function ViewMatchPage() {
                   {isDraw ? "Draw" : `${winner?.name} Victory`}
                 </span>
               </div>
-              {match.tournament && (
-                <div className="flex justify-between items-center">
-                  <span className="text-small text-default-500">Format</span>
-                  <span className="text-small font-medium">
-                    {match.deckA.format.name}
-                  </span>
-                </div>
-              )}
+
+              <div className="flex justify-between items-center">
+                <span className="text-small text-default-500">Format</span>
+                <span className="text-small font-medium">
+                  {match.deckA.format.name}
+                </span>
+              </div>
             </div>
           </CardBody>
         </Card>
