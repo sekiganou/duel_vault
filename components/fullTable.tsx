@@ -19,8 +19,13 @@ import {
   TableRow,
 } from "@heroui/table";
 import { Selection, SortDescriptor } from "@react-types/shared";
-import { IconChevronDown, IconPlus, IconSearch } from "@tabler/icons-react";
-import { Key, useCallback, useMemo, useState } from "react";
+import {
+  IconChevronDown,
+  IconPlus,
+  IconSearch,
+  IconTrash,
+} from "@tabler/icons-react";
+import { Key, useCallback, useEffect, useMemo, useState } from "react";
 
 interface FullTableProps<T> {
   columns: TableColumnDescriptor[];
@@ -29,11 +34,13 @@ interface FullTableProps<T> {
   items: T[];
   searchFilter: (item: T, filterValue: string) => boolean;
   loadingItems: boolean;
+  deletingItems: boolean;
   renderCell: (item: T, columnKey: Key) => JSX.Element;
   onOpenCreateModal: () => void;
   // EditModal: () => JSX.Element;
   getStatus: (item: T) => string;
   getItemKey: (item: T) => number;
+  handleDeleteItems: (keys: Set<number>) => void;
 }
 
 export const capitalize = (s: string) =>
@@ -46,12 +53,14 @@ export const FullTable = <T,>(props: FullTableProps<T>) => {
     statusOptions,
     items,
     loadingItems,
+    deletingItems,
     renderCell,
     // EditModal,
     onOpenCreateModal,
     getStatus,
     searchFilter,
     getItemKey,
+    handleDeleteItems,
   } = props;
 
   const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -153,6 +162,12 @@ export const FullTable = <T,>(props: FullTableProps<T>) => {
     setPage(1);
   }, []);
 
+  useEffect(() => {
+    if (!deletingItems) {
+      setSelectedKeys(new Set());
+    }
+  }, [deletingItems]);
+
   const topContent = useMemo(() => {
     return (
       <div className="flex flex-col gap-4">
@@ -216,13 +231,30 @@ export const FullTable = <T,>(props: FullTableProps<T>) => {
                 ))}
               </DropdownMenu>
             </Dropdown>
-            <Button
-              color="primary"
-              endContent={<IconPlus />}
-              onPress={onOpenCreateModal}
-            >
-              Add New
-            </Button>
+            {selectedKeys === "all" || selectedKeys.size > 0 ? (
+              <Button
+                color="default"
+                endContent={<IconTrash />}
+                onPress={() => {
+                  handleDeleteItems(
+                    new Set(Array.from(selectedKeys) as number[])
+                  );
+                }}
+                isLoading={deletingItems}
+              >
+                Delete{" "}
+                {selectedKeys === "all" ? items.length : selectedKeys.size}{" "}
+                items
+              </Button>
+            ) : (
+              <Button
+                color="primary"
+                endContent={<IconPlus />}
+                onPress={onOpenCreateModal}
+              >
+                Add New
+              </Button>
+            )}
           </div>
         </div>
         <div className="flex justify-between items-center">
@@ -250,6 +282,7 @@ export const FullTable = <T,>(props: FullTableProps<T>) => {
     onSearchChange,
     onRowsPerPageChange,
     items.length,
+    selectedKeys,
     hasSearchFilter,
   ]);
 

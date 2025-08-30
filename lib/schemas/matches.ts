@@ -11,3 +11,5 @@ export const UpsertMatchSchema = z.object({
   notes: z.string().nullable(),
   date: z.string().datetime(),
 });
+
+export const DeleteMatchesSchema = z.array(z.number());

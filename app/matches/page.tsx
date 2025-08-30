@@ -7,6 +7,7 @@ import {
   deleteMatch,
   getMatchStatus,
   statusColorMap,
+  deleteMatches,
 } from "@/lib/api/matches";
 import { getAllDecks } from "@/lib/api/decks";
 import {
@@ -24,7 +25,7 @@ import {
   DropdownMenu,
   DropdownTrigger,
 } from "@heroui/dropdown";
-import { Key, useCallback, useEffect, useState } from "react";
+import { Key, use, useCallback, useEffect, useState } from "react";
 import { Button } from "@heroui/button";
 import { Chip, ChipProps } from "@heroui/chip";
 import { IconDotsVertical, IconPlus, IconTrash } from "@tabler/icons-react";
@@ -526,6 +527,7 @@ export default function MatchesPage() {
   const [decks, setDecks] = useState<DeckWithRelations[]>([]);
   const [tournaments, setTournaments] = useState<TournamentWithRelations[]>([]);
   const [loadingMatches, setLoadingMatches] = useState(true);
+  const [deletingMatches, setDeletingMatches] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<MatchWithRelations | null>(
     null
   );
@@ -560,6 +562,17 @@ export default function MatchesPage() {
     } finally {
       setLoadingMatches(false);
     }
+  };
+
+  const handleDeleteMatches = (keys: Set<number>) => {
+    setDeletingMatches(true);
+    deleteMatches(Array.from(keys.values().map((k) => Number(k))))
+      .then(() => {
+        handleGetAllMatches();
+      })
+      .finally(() => {
+        setDeletingMatches(false);
+      });
   };
 
   useEffect(() => {
@@ -718,6 +731,7 @@ export default function MatchesPage() {
         items={matches}
         searchFilter={searchFilter}
         loadingItems={loadingMatches}
+        deletingItems={deletingMatches}
         renderCell={renderCell}
         onOpenCreateModal={() => {
           setSelectedMatch(null);
@@ -725,6 +739,7 @@ export default function MatchesPage() {
         }}
         getStatus={getMatchStatus}
         getItemKey={(match) => match.id}
+        handleDeleteItems={handleDeleteMatches}
       />
 
       <UpsertModal
