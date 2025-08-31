@@ -161,6 +161,11 @@ export default function Home() {
             setSelectedFormatId(key === "all" ? "all" : parseInt(key as string))
           }
           variant="underlined"
+          classNames={{
+            base: `w-[50%]`,
+            tabList: "flex-col md:flex-row gap-2 md:gap-0 w-full md:w-auto ",
+            tab: "w-full md:w-auto justify-start md:justify-center text-left md:text-center",
+          }}
         >
           <Tab key="all" title="All Formats" />
           {formats.map((format) => (
