@@ -161,6 +161,11 @@ export default function Home() {
             setSelectedFormatId(key === "all" ? "all" : parseInt(key as string))
           }
           variant="underlined"
+          classNames={{
+            base: `w-[50%]`,
+            tabList: "flex-col md:flex-row gap-2 md:gap-0 w-full md:w-auto ",
+            tab: "w-full md:w-auto justify-start md:justify-center text-left md:text-center",
+          }}
         >
           <Tab key="all" title="All Formats" />
           {formats.map((format) => (
@@ -318,9 +323,9 @@ export default function Home() {
           </CardHeader>
           <CardBody className="gap-3">
             {decksSortedByWinRate.slice(0, MAX_ELEMENTS).map((deck) => {
-              const deckWinRate = Math.round(
-                (deck.wins / (deck.wins + deck.losses + deck.ties)) * 100
-              );
+              const totalGames = deck.wins + deck.losses + deck.ties;
+              const deckWinRate =
+                totalGames > 0 ? Math.round((deck.wins / totalGames) * 100) : 0;
               return (
                 <div
                   key={deck.id}
@@ -359,9 +364,7 @@ export default function Home() {
                 </div>
               );
             })}
-            {filteredDecks.filter(
-              (deck) => deck.wins + deck.losses + deck.ties > 0
-            ).length === 0 && (
+            {filteredDecks.length === 0 && (
               <p className="text-default-400 text-center py-4">
                 No match data available
               </p>

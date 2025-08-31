@@ -61,16 +61,15 @@ export const Navbar = () => {
         </NavbarBrand>
         <ul className="hidden sm:flex gap-4 justify-start ml-12">
           {siteConfig.navItems.map((item) => (
-            <NavbarItem key={item.href}>
+            <NavbarItem key={item.href} isActive={selectedLabel === item.label}>
               <NextLink
                 onClick={() => setSelectedLabel(item.label)}
                 className={clsx(
                   linkStyles({
-                    color: "foreground",
-                  }),
-                  "data-[active=true]:text-primary data-[active=true]:font-medium"
+                    color:
+                      selectedLabel === item.label ? "primary" : "foreground",
+                  })
                 )}
-                color={"foreground"}
                 href={item.href}
               >
                 {item.label}
@@ -97,7 +96,10 @@ export const Navbar = () => {
       <NavbarMenu>
         <div className="mx-4 mt-2 flex flex-col gap-2">
           {siteConfig.navItems.map((item, index) => (
-            <NavbarMenuItem key={`${item}-${index}`}>
+            <NavbarMenuItem
+              key={`${item}-${index}`}
+              isActive={selectedLabel === item.label}
+            >
               <Link
                 onClick={() => handleSelectLabel(item.label)}
                 color={selectedLabel === item.label ? "primary" : "foreground"}

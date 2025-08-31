@@ -431,17 +431,6 @@ export default function DecksPage() {
         setLoadingDecks(false);
       });
 
-  const handleDeleteDecks = (keys: Set<number>) => {
-    setDeletingDecks(true);
-    deleteDecks(Array.from(keys.values().map((k) => Number(k))))
-      .then(() => {
-        handleGetAllDecks();
-      })
-      .finally(() => {
-        setDeletingDecks(false);
-      });
-  };
-
   const handleGetAllArchetypes = () => getAllArchetypes().then(setArchetypes);
 
   useEffect(() => {
@@ -559,13 +548,14 @@ export default function DecksPage() {
         statusOptions={statusOptions}
         items={decks}
         loadingItems={loadingDecks}
-        deletingItems={deletingDecks}
         renderCell={renderCell}
         getStatus={getDeckStatus}
         onOpenCreateModal={onOpenCreateModal}
         searchFilter={searchFilter}
         getItemKey={(deck: DeckWithRelations) => deck.id}
-        handleDeleteItems={handleDeleteDecks}
+        getItemName={(deck: DeckWithRelations) => deck.name}
+        deleteItems={deleteDecks}
+        handleGetAllItems={handleGetAllDecks}
       />
 
       <UpsertModal
@@ -579,6 +569,7 @@ export default function DecksPage() {
         handleGetAllArchetypes={handleGetAllArchetypes}
         deck={isOpenCreateModal ? null : selectedDeck}
       />
+
       <DeleteModal
         isOpen={isOpenDeleteModal}
         onOpenChange={onOpenDeleteModalChange}

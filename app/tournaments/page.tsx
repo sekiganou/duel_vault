@@ -222,7 +222,9 @@ const UpsertModal = ({
       setTournamentName("");
       setTournamentFormatId("");
       setTournamentStartDate(new Date().toISOString().slice(0, 16));
-      setTournamentEndDate(new Date().toISOString().slice(0, 16));
+      setTournamentEndDate(
+        new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 16)
+      );
       setTournamentNotes("");
       setTournamentLink("");
       setTournamentParticipants(new Set([]));
@@ -372,9 +374,9 @@ const UpsertModal = ({
                   participantsTouched && !isTournamentParticipantsValid
                 }
                 renderValue={(items) => (
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto py-1">
                     {items.map((item) => (
-                      <Chip key={item.key}>
+                      <Chip key={item.key} color="default" variant="faded">
                         {mappedDecksIdName.get(Number(item.key))}
                       </Chip>
                     ))}
@@ -468,13 +470,6 @@ export default function TournamentsPage() {
       .finally(() => {
         setLoadingTournaments(false);
       });
-
-  const handleDeleteTournaments = (keys: Set<number>) => {
-    setDeletingTournaments(true);
-    deleteTournaments(Array.from(keys.values().map((k) => Number(k))))
-      .then(() => handleGetAllTournaments())
-      .finally(() => setDeletingTournaments(false));
-  };
 
   useEffect(() => {
     async function fetchData() {
@@ -604,7 +599,6 @@ export default function TournamentsPage() {
         statusOptions={statusOptions}
         items={tournaments}
         loadingItems={loadingTournaments}
-        deletingItems={deletingTournaments}
         renderCell={renderCell}
         getStatus={getTournamentStatus}
         onOpenCreateModal={onOpenCreateModal}
@@ -618,7 +612,9 @@ export default function TournamentsPage() {
             .includes(filterValue.toLowerCase())
         }
         getItemKey={(tournament: TournamentWithRelations) => tournament.id}
-        handleDeleteItems={handleDeleteTournaments}
+        getItemName={(tournament: TournamentWithRelations) => tournament.name}
+        deleteItems={deleteTournaments}
+        handleGetAllItems={handleGetAllTournaments}
       />
 
       <UpsertModal
