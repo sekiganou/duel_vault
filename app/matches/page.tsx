@@ -564,17 +564,6 @@ export default function MatchesPage() {
     }
   };
 
-  const handleDeleteMatches = (keys: Set<number>) => {
-    setDeletingMatches(true);
-    deleteMatches(Array.from(keys.values().map((k) => Number(k))))
-      .then(() => {
-        handleGetAllMatches();
-      })
-      .finally(() => {
-        setDeletingMatches(false);
-      });
-  };
-
   useEffect(() => {
     handleGetAllMatches();
   }, []);
@@ -731,7 +720,6 @@ export default function MatchesPage() {
         items={matches}
         searchFilter={searchFilter}
         loadingItems={loadingMatches}
-        deletingItems={deletingMatches}
         renderCell={renderCell}
         onOpenCreateModal={() => {
           setSelectedMatch(null);
@@ -739,7 +727,11 @@ export default function MatchesPage() {
         }}
         getStatus={getMatchStatus}
         getItemKey={(match) => match.id}
-        handleDeleteItems={handleDeleteMatches}
+        getItemName={(match) =>
+          `${match.deckA.name} vs ${match.deckB.name} (${match.date.toString().split("T")[0]})`
+        }
+        deleteItems={deleteMatches}
+        handleGetAllItems={handleGetAllMatches}
       />
 
       <UpsertModal
