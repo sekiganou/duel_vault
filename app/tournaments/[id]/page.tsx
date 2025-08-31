@@ -411,15 +411,18 @@ export default function ViewTournamentPage() {
                           <TableCell>
                             <User
                               name={deckStat.deck.name}
-                              description={deckStat.deck.format.name}
+                              // description={deckStat.deck.format.name}
                               avatarProps={{
                                 src: deckStat.deck.avatar || undefined,
                                 size: "sm",
                                 radius: "lg",
                               }}
+                              // className="text-default-400"
                             />
                           </TableCell>
-                          <TableCell>{deckStat.deck.archetype.name}</TableCell>
+                          <TableCell className="text-default-400">
+                            {deckStat.deck.archetype.name}
+                          </TableCell>
                           <TableCell>
                             <span className="text-success font-semibold">
                               {deckStat.wins}
