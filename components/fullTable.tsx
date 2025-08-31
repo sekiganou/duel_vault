@@ -51,6 +51,74 @@ interface FullTableProps<T> {
   handleGetAllItems: () => Promise<void>;
 }
 
+const DeleteModal = <T,>({
+  isOpen,
+  onOpenChange,
+  items,
+  deleteItems,
+  handleGetAllItems,
+  getItemName,
+  getItemKey,
+  emptySelectedKeys,
+}: {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  items: T[];
+  deleteItems: (ids: number[]) => Promise<void>;
+  handleGetAllItems: () => Promise<void>;
+  getItemName: (item: T) => string;
+  getItemKey: (item: T) => number;
+  emptySelectedKeys: () => void;
+}) => {
+  const [loadingDelete, setLoadingDelete] = useState(false);
+
+  const handleDelete = () => {
+    setLoadingDelete(true);
+    deleteItems(items.map((item) => getItemKey(item)))
+      .then(() => {
+        onOpenChange(false);
+        handleGetAllItems();
+      })
+      .finally(() => {
+        setLoadingDelete(false);
+        emptySelectedKeys();
+      });
+  };
+  return (
+    <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
+      <ModalContent>
+        {(onClose) => (
+          <>
+            <ModalHeader>Delete Items</ModalHeader>
+            <ModalBody>
+              <p>Are you sure you want to delete the following items?</p>
+              <ul className="list-disc list-inside ml-4 max-h-48 overflow-y-auto">
+                {items.map((item, index) => (
+                  <li key={index}>
+                    <b>{getItemName(item)}</b>
+                  </li>
+                ))}
+              </ul>
+            </ModalBody>
+            <ModalFooter>
+              <Button variant="light" color="default" onPress={onClose}>
+                Cancel
+              </Button>
+              <Button
+                color="danger"
+                onPress={handleDelete}
+                isLoading={loadingDelete}
+              >
+                Delete
+              </Button>
+            </ModalFooter>
+          </>
+        )}
+      </ModalContent>
+    </Modal>
+  );
+};
+
 export const capitalize = (s: string) =>
   s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : "";
 
@@ -333,70 +401,6 @@ export const FullTable = <T,>(props: FullTableProps<T>) => {
     );
   }, [selectedKeys, memoizedItems.length, page, pages, hasSearchFilter]);
 
-  const DeleteModal = ({
-    isOpen,
-    onOpenChange,
-    items,
-    deleteItems,
-    handleGetAllItems,
-    getItemName,
-  }: {
-    isOpen: boolean;
-    onOpenChange: (open: boolean) => void;
-    items: T[];
-    deleteItems: (ids: number[]) => Promise<void>;
-    handleGetAllItems: () => Promise<void>;
-    getItemName: (item: T) => string;
-  }) => {
-    const [loadingDelete, setLoadingDelete] = useState(false);
-
-    const handleDelete = () => {
-      setLoadingDelete(true);
-      deleteItems(Array.from(selectedKeys).map((k) => Number(k)))
-        .then(() => {
-          onOpenChange(false);
-          handleGetAllItems();
-        })
-        .finally(() => {
-          setLoadingDelete(false);
-          setSelectedKeys(new Set());
-        });
-    };
-    return (
-      <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
-        <ModalContent>
-          {(onClose) => (
-            <>
-              <ModalHeader>Delete Items</ModalHeader>
-              <ModalBody>
-                <p>Are you sure you want to delete the following items?</p>
-                <ul className="list-disc list-inside ml-4 max-h-48 overflow-y-auto">
-                  {items.map((item, index) => (
-                    <li key={index}>
-                      <b>{getItemName(item)}</b>
-                    </li>
-                  ))}
-                </ul>
-              </ModalBody>
-              <ModalFooter>
-                <Button variant="light" color="default" onPress={onClose}>
-                  Cancel
-                </Button>
-                <Button
-                  color="danger"
-                  onPress={handleDelete}
-                  isLoading={loadingDelete}
-                >
-                  Delete
-                </Button>
-              </ModalFooter>
-            </>
-          )}
-        </ModalContent>
-      </Modal>
-    );
-  };
-
   return (
     <>
       <Table
@@ -453,7 +457,9 @@ export const FullTable = <T,>(props: FullTableProps<T>) => {
         }
         deleteItems={deleteItems}
         getItemName={getItemName}
+        getItemKey={getItemKey}
         handleGetAllItems={handleGetAllItems}
+        emptySelectedKeys={() => setSelectedKeys(new Set())}
       />
     </>
   );
