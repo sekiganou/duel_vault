@@ -604,7 +604,6 @@ export default function TournamentsPage() {
         statusOptions={statusOptions}
         items={tournaments}
         loadingItems={loadingTournaments}
-        deletingItems={deletingTournaments}
         renderCell={renderCell}
         getStatus={getTournamentStatus}
         onOpenCreateModal={onOpenCreateModal}
@@ -618,7 +617,9 @@ export default function TournamentsPage() {
             .includes(filterValue.toLowerCase())
         }
         getItemKey={(tournament: TournamentWithRelations) => tournament.id}
-        handleDeleteItems={handleDeleteTournaments}
+        getItemName={(tournament: TournamentWithRelations) => tournament.name}
+        deleteItems={deleteTournaments}
+        handleGetAllItems={handleGetAllTournaments}
       />
 
       <UpsertModal

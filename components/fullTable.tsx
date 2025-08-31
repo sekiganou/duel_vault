@@ -8,6 +8,14 @@ import {
   DropdownTrigger,
 } from "@heroui/dropdown";
 import { Input } from "@heroui/input";
+import {
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  useDisclosure,
+} from "@heroui/modal";
 import { Pagination } from "@heroui/pagination";
 import { Spinner } from "@heroui/spinner";
 import {
@@ -34,13 +42,13 @@ interface FullTableProps<T> {
   items: T[];
   searchFilter: (item: T, filterValue: string) => boolean;
   loadingItems: boolean;
-  deletingItems: boolean;
   renderCell: (item: T, columnKey: Key) => JSX.Element;
   onOpenCreateModal: () => void;
-  // EditModal: () => JSX.Element;
   getStatus: (item: T) => string;
   getItemKey: (item: T) => number;
-  handleDeleteItems: (keys: Set<number>) => void;
+  getItemName: (item: T) => string;
+  deleteItems: (ids: number[]) => Promise<void>;
+  handleGetAllItems: () => Promise<void>;
 }
 
 export const capitalize = (s: string) =>
@@ -53,14 +61,14 @@ export const FullTable = <T,>(props: FullTableProps<T>) => {
     statusOptions,
     items,
     loadingItems,
-    deletingItems,
     renderCell,
-    // EditModal,
     onOpenCreateModal,
     getStatus,
     searchFilter,
     getItemKey,
-    handleDeleteItems,
+    deleteItems,
+    getItemName,
+    handleGetAllItems,
   } = props;
 
   const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -71,6 +79,11 @@ export const FullTable = <T,>(props: FullTableProps<T>) => {
   const [visibleColumns, setVisibleColumns] = useState<Selection>(
     new Set(initialVisibleColumns)
   );
+  const {
+    isOpen: isOpenDeleteModal,
+    onOpen: onOpenDeleteModal,
+    onOpenChange: onOpenDeleteModalChange,
+  } = useDisclosure();
 
   const headerColumns = useMemo(() => {
     if (visibleColumns === "all") return columns;
@@ -162,12 +175,6 @@ export const FullTable = <T,>(props: FullTableProps<T>) => {
     setPage(1);
   }, []);
 
-  useEffect(() => {
-    if (!deletingItems) {
-      setSelectedKeys(new Set());
-    }
-  }, [deletingItems]);
-
   const topContent = useMemo(() => {
     return (
       <div className="flex flex-col gap-4">
@@ -236,11 +243,12 @@ export const FullTable = <T,>(props: FullTableProps<T>) => {
                 color="default"
                 endContent={<IconTrash />}
                 onPress={() => {
-                  handleDeleteItems(
-                    new Set(Array.from(selectedKeys) as number[])
-                  );
+                  onOpenDeleteModal();
+                  // handleDeleteItems(
+                  //   new Set(Array.from(selectedKeys) as number[])
+                  // );
                 }}
-                isLoading={deletingItems}
+                // isLoading={deletingItems}
               >
                 Delete{" "}
                 {selectedKeys === "all" ? items.length : selectedKeys.size}{" "}
@@ -325,6 +333,70 @@ export const FullTable = <T,>(props: FullTableProps<T>) => {
     );
   }, [selectedKeys, memoizedItems.length, page, pages, hasSearchFilter]);
 
+  const DeleteModal = ({
+    isOpen,
+    onOpenChange,
+    items,
+    deleteItems,
+    handleGetAllItems,
+    getItemName,
+  }: {
+    isOpen: boolean;
+    onOpenChange: (open: boolean) => void;
+    items: T[];
+    deleteItems: (ids: number[]) => Promise<void>;
+    handleGetAllItems: () => Promise<void>;
+    getItemName: (item: T) => string;
+  }) => {
+    const [loadingDelete, setLoadingDelete] = useState(false);
+
+    const handleDelete = () => {
+      setLoadingDelete(true);
+      deleteItems(Array.from(selectedKeys).map((k) => Number(k)))
+        .then(() => {
+          onOpenChange(false);
+          handleGetAllItems();
+        })
+        .finally(() => {
+          setLoadingDelete(false);
+          setSelectedKeys(new Set());
+        });
+    };
+    return (
+      <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader>Delete Items</ModalHeader>
+              <ModalBody>
+                <p>Are you sure you want to delete the following items?</p>
+                <ul className="list-disc list-inside ml-4 max-h-48 overflow-y-auto">
+                  {items.map((item, index) => (
+                    <li key={index}>
+                      <b>{getItemName(item)}</b>
+                    </li>
+                  ))}
+                </ul>
+              </ModalBody>
+              <ModalFooter>
+                <Button variant="light" color="default" onPress={onClose}>
+                  Cancel
+                </Button>
+                <Button
+                  color="danger"
+                  onPress={handleDelete}
+                  isLoading={loadingDelete}
+                >
+                  Delete
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+    );
+  };
+
   return (
     <>
       <Table
@@ -369,6 +441,20 @@ export const FullTable = <T,>(props: FullTableProps<T>) => {
           )}
         </TableBody>
       </Table>
+      <DeleteModal
+        isOpen={isOpenDeleteModal}
+        onOpenChange={onOpenDeleteModalChange}
+        items={
+          selectedKeys === "all"
+            ? items
+            : items.filter((item) =>
+                (selectedKeys as Set<string>).has(getItemKey(item).toString())
+              )
+        }
+        deleteItems={deleteItems}
+        getItemName={getItemName}
+        handleGetAllItems={handleGetAllItems}
+      />
     </>
   );
 };
