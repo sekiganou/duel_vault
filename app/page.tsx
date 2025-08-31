@@ -323,9 +323,9 @@ export default function Home() {
           </CardHeader>
           <CardBody className="gap-3">
             {decksSortedByWinRate.slice(0, MAX_ELEMENTS).map((deck) => {
-              const deckWinRate = Math.round(
-                (deck.wins / (deck.wins + deck.losses + deck.ties)) * 100
-              );
+              const totalGames = deck.wins + deck.losses + deck.ties;
+              const deckWinRate =
+                totalGames > 0 ? Math.round((deck.wins / totalGames) * 100) : 0;
               return (
                 <div
                   key={deck.id}
@@ -364,9 +364,7 @@ export default function Home() {
                 </div>
               );
             })}
-            {filteredDecks.filter(
-              (deck) => deck.wins + deck.losses + deck.ties > 0
-            ).length === 0 && (
+            {filteredDecks.length === 0 && (
               <p className="text-default-400 text-center py-4">
                 No match data available
               </p>
