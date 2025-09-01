@@ -35,16 +35,17 @@ model Deck {
 }
 
 model Tournament {
-  id         Int       @id @default(autoincrement())
-  name       String
-  format     Format    @relation(fields: [formatId], references: [id])
-  formatId   Int
-  startDate  DateTime
-  endDate    DateTime?
-  notes      String?
-  link       String?
-  updatedAt  DateTime? @updatedAt
-  createdAt  DateTime  @default(now())
+  id                      Int       @id @default(autoincrement())
+  name                    String
+  format                  Format    @relation(fields: [formatId], references: [id])
+  formatId                Int
+  startDate               DateTime
+  endDate                 DateTime?
+  notes                   String?
+  link                    String?
+  updatedAt               DateTime? @updatedAt
+  createdAt               DateTime  @default(now())
+  challongeTournamentURL  String?
 
   matches    Match[]
   deckStats  TournamentDeckStats[]
@@ -53,25 +54,27 @@ model Tournament {
 }
 
 model Match {
-  id            Int       @id @default(autoincrement())
-  tournament    Tournament? @relation(fields: [tournamentId], references: [id],  onDelete: SetNull)
-  tournamentId  Int?
+  id                Int       @id @default(autoincrement())
+  tournament        Tournament? @relation(fields: [tournamentId], references: [id],  onDelete: SetNull)
+  tournamentId      Int?
 
-  deckA         Deck      @relation("DeckA", fields: [deckAId], references: [id])
-  deckAId       Int
+  deckA             Deck      @relation("DeckA", fields: [deckAId], references: [id])
+  deckAId           Int
+    
+  deckB             Deck      @relation("DeckB", fields: [deckBId], references: [id])
+  deckBId           Int
+    
+  winner            Deck?     @relation("Winner", fields: [winnerId], references: [id])
+  winnerId          Int?
+    
+  deckAScore        Int
+  deckBScore        Int
+  notes             String?
+  date              DateTime
+  updatedAt         DateTime? @updatedAt
+  createdAt         DateTime  @default(now())
 
-  deckB         Deck      @relation("DeckB", fields: [deckBId], references: [id])
-  deckBId       Int
-
-  winner        Deck?     @relation("Winner", fields: [winnerId], references: [id])
-  winnerId      Int?
-
-  deckAScore    Int
-  deckBScore    Int
-  notes         String?
-  date          DateTime
-  updatedAt     DateTime? @updatedAt
-  createdAt     DateTime  @default(now())
+  challongeMatchId  Int?
 
   @@map("matches")
 }
