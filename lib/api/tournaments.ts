@@ -3,6 +3,8 @@ import { TournamentWithRelations } from "@/types";
 import { addToast } from "@heroui/toast";
 import { getAvatarUrl } from "./avatarCache";
 import { DeleteTournamentsSchema } from "../schemas/tournaments";
+import { CreateChallongeTournamentSchema } from "../schemas/challonge";
+import { promise } from "zod";
 
 const basePath = "/api/tournaments";
 
@@ -49,14 +51,32 @@ export async function createTournament(tournament: {
   notes?: string;
   link?: string;
   participants: Array<number>;
+  tournament_type: string;
+  ranked_by: string;
 }) {
   try {
-    const res = await axios.post(basePath, tournament);
+    const { tournament_type, ranked_by, ...data } = tournament;
+    const challongeTournament = CreateChallongeTournamentSchema.parse({
+      name: data.name,
+      description: data.notes || "",
+      tournament_type,
+      ranked_by,
+    });
+
+    // TODO: Handle rollback if one of the two requests fail
+    const [responseTournament, responseChallongeTournament] = await Promise.all(
+      [
+        axios.post(basePath, data),
+        axios.post("/api/challonge/tournaments", challongeTournament),
+      ]
+    );
+
     addToast({
       title: "Tournament created successfully",
       color: "success",
     });
-    return res.data;
+
+    return responseTournament.data;
   } catch (error) {
     addToast({
       title: "Failed to create tournament. Please try again.",
@@ -75,9 +95,11 @@ export async function updateTournament(tournament: {
   notes?: string;
   link?: string;
   participants: Array<number>;
+  tournament_type: string;
+  ranked_by: string;
 }) {
   try {
-    const { participants, ...data } = tournament;
+    const { participants, tournament_type, ranked_by, ...data } = tournament;
     const res = await axios.post(`${basePath}/${tournament.id}`, data);
     addToast({
       title: "Tournament updated successfully",

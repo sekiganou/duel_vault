@@ -45,7 +45,8 @@ model Tournament {
   link                    String?
   updatedAt               DateTime? @updatedAt
   createdAt               DateTime  @default(now())
-  challongeTournamentURL  String?
+  challongeTournamentUrl  String? @map("challongeTournamentURL")
+  challongeTournamentId   Int?    
 
   matches    Match[]
   deckStats  TournamentDeckStats[]

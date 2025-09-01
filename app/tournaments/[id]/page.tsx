@@ -555,6 +555,23 @@ export default function ViewTournamentPage() {
               </Table>
             ),
           },
+          {
+            title: "Bracket",
+            key: "bracket",
+            emptyContent: {
+              header: "No Bracket Available",
+              text: "This tournament has bracket available yet.",
+              icon: (props) => <IconSwords {...props} />,
+              displayEmptyContent: tournament.challongeTournamentUrl === "",
+            },
+            cardBody: (
+              <iframe
+                src={`https://challonge.com/${tournament.challongeTournamentUrl}/module`}
+                width="100%"
+                height="1000"
+              ></iframe>
+            ),
+          },
         ]}
       />
     </div>

@@ -53,6 +53,11 @@ import { capitalize, FullTable } from "@/components/fullTable";
 import { useRouter } from "next/navigation";
 import { getAllDecks } from "@/lib/api/decks";
 import { Avatar } from "@heroui/avatar";
+import { ChallongeTournament } from "@/types/challonge";
+import {
+  getAllChallongeTournaments,
+  getChallongeTournament,
+} from "@/lib/challonge/tournaments";
 
 const columns: TableColumnDescriptor[] = [
   { name: "ID", uid: "id", sortable: true },
@@ -161,12 +166,14 @@ const UpsertModal = ({
   formats,
   handleGetAllTournaments,
   tournament,
+  challongeTournament,
 }: {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   formats: Format[];
   handleGetAllTournaments: () => Promise<void>;
   tournament: TournamentWithRelations | null;
+  challongeTournament: ChallongeTournament | null;
 }) => {
   const isEdit = !!tournament;
   const [decks, setDecks] = useState<DeckWithRelations[]>();
@@ -188,6 +195,8 @@ const UpsertModal = ({
   const [participantsTouched, setParticipantsTouched] = useState(false);
   const [tournamentParticipants, setTournamentParticipants] =
     useState<Selection>(new Set([]));
+  const [tournamentType, setTournamentType] = useState("");
+  const [rankedBy, setRankedBy] = useState("");
 
   useEffect(() => {
     handleReset();
@@ -218,6 +227,8 @@ const UpsertModal = ({
       setTournamentParticipants(
         new Set(tournament.deckStats.map((ds) => ds.deckId.toString()))
       );
+      setRankedBy(challongeTournament?.tournament.ranked_by || "");
+      setTournamentType(challongeTournament?.tournament.tournament_type || "");
     } else {
       setTournamentName("");
       setTournamentFormatId("");
@@ -228,6 +239,8 @@ const UpsertModal = ({
       setTournamentNotes("");
       setTournamentLink("");
       setTournamentParticipants(new Set([]));
+      setRankedBy("");
+      setTournamentType("");
     }
     setTournamentNameInputError("");
     setParticipantsTouched(false);
@@ -243,6 +256,8 @@ const UpsertModal = ({
       notes: tournamentNotes || undefined,
       link: tournamentLink || undefined,
       participants: Array.from(tournamentParticipants).map((p) => Number(p)),
+      tournament_type: tournamentType,
+      ranked_by: rankedBy,
     };
 
     const operation = isEdit
@@ -334,13 +349,58 @@ const UpsertModal = ({
                   onChange={(e) => setTournamentEndDate(e.target.value)}
                 />
 
-                <Input
+                <Select
+                  label="Tournament Type"
+                  placeholder="Select tournament type"
+                  selectedKeys={[tournamentType]}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                    setTournamentType(e.target.value)
+                  }
+                  isRequired
+                >
+                  <SelectItem key="single elimination">
+                    Single Elimination
+                  </SelectItem>
+                  <SelectItem key="double elimination">
+                    Double Elimination
+                  </SelectItem>
+                  <SelectItem key="round robin">Round Robin</SelectItem>
+                  <SelectItem key="swiss">Swiss</SelectItem>
+                </Select>
+
+                <Select
+                  label="Ranked by"
+                  placeholder="Select ranked by"
+                  selectedKeys={[rankedBy]}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                    setRankedBy(e.target.value)
+                  }
+                  isRequired
+                >
+                  <SelectItem key="match wins">Match Wins</SelectItem>
+                  <SelectItem key="game wins">Game Wins</SelectItem>
+                  <SelectItem key="points scored">Points Scored</SelectItem>
+                  <SelectItem key="points difference">
+                    Points Difference
+                  </SelectItem>
+                </Select>
+
+                {/* <Input
                   type="url"
                   label="Link (Optional)"
                   placeholder="https://..."
                   value={tournamentLink}
                   onChange={(e) => setTournamentLink(e.target.value)}
-                />
+                /> */}
+
+                {/* <Input
+                  type="text"
+                  label="Challonge URL"
+                  placeholder="Challonge URL"
+                  isRequired
+                  value={challongeTournamentUrl}
+                  onChange={(e) => setChallongeTournamentUrl(e.target.value)}
+                /> */}
               </div>
 
               <Select
@@ -441,9 +501,11 @@ const UpsertModal = ({
 
 export default function TournamentsPage() {
   const [tournaments, setTournaments] = useState<TournamentWithRelations[]>([]);
+  const [challongeTournaments, setChallongeTournaments] = useState<
+    ChallongeTournament[]
+  >([]);
   const [formats, setFormats] = useState<Format[]>([]);
   const [loadingTournaments, setLoadingTournaments] = useState(true);
-  const [deletingTournaments, setDeletingTournaments] = useState(false);
   const [selectedTournament, setSelectedTournament] =
     useState<TournamentWithRelations | null>(null);
   const router = useRouter();
@@ -464,16 +526,19 @@ export default function TournamentsPage() {
     onOpenChange: onOpenEditModalChange,
   } = useDisclosure();
 
-  const handleGetAllTournaments = () =>
-    getAllTournaments()
-      .then(setTournaments)
-      .finally(() => {
-        setLoadingTournaments(false);
-      });
+  const handleGetAllTournaments = async () => {
+    const [tournamentsData, challongeTournamentsData] = await Promise.all([
+      getAllTournaments(),
+      getAllChallongeTournaments(),
+    ]);
+    setTournaments(tournamentsData);
+    setChallongeTournaments(challongeTournamentsData);
+    setLoadingTournaments(false);
+  };
 
   useEffect(() => {
     async function fetchData() {
-      handleGetAllTournaments();
+      await handleGetAllTournaments();
       getAllFormats().then(setFormats);
     }
 
@@ -625,6 +690,14 @@ export default function TournamentsPage() {
         formats={formats}
         handleGetAllTournaments={handleGetAllTournaments}
         tournament={isOpenCreateModal ? null : selectedTournament}
+        challongeTournament={
+          isOpenCreateModal
+            ? null
+            : challongeTournaments.find(
+                (ct) =>
+                  ct.tournament.id === selectedTournament?.challongeTournamentId
+              )!
+        }
       />
 
       <DeleteModal
