@@ -86,8 +86,10 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     const storage = new JsonDatabase();
     const manager = new BracketsManager(storage);
 
+    const name = "Example stage";
+
     await manager.create.stage({
-      name: "Example stage",
+      name: name,
       tournamentId: tournament.id, //
       type: "single_elimination",
       seeding: participants.map((deckId) => "Team " + deckId),

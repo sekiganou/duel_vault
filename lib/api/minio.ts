@@ -1,6 +1,5 @@
 import axios from "axios";
 import { DeleteObjectSchema, UploadObjectSchema } from "../schemas/minio";
-import { getMinioClient, IMAGE_BUCKET } from "@/s3";
 
 // Client-safe UUID generator
 function randomUUID(): string {
@@ -15,12 +14,17 @@ function randomUUID(): string {
 
 const basePath = "/api/minio";
 
-export async function uploadFile(file: File): Promise<string> {
+export async function uploadFile(bucket: String, file: File): Promise<string> {
   const uuid = randomUUID();
   const { type: contentType } = file;
   const filename = `${uuid}-${file.name}`;
-  const validateFile = UploadObjectSchema.parse({ filename, contentType });
+  const validateFile = UploadObjectSchema.parse({
+    bucket,
+    filename,
+    contentType,
+  });
   const response = await axios.post(`${basePath}`, {
+    bucket: validateFile.bucket,
     filename: validateFile.filename,
     contentType: validateFile.contentType,
   });
@@ -30,7 +34,12 @@ export async function uploadFile(file: File): Promise<string> {
   return filename;
 }
 
-export async function deleteFile(filename: string): Promise<void> {
-  const validateRequest = DeleteObjectSchema.parse({ filename });
-  await axios.delete(`${basePath}?filename=${validateRequest.filename}`);
+export async function deleteFile(
+  bucket: String,
+  filename: string
+): Promise<void> {
+  const validateRequest = DeleteObjectSchema.parse({ bucket, filename });
+  await axios.delete(
+    `${basePath}?bucket=${validateRequest.bucket}&filename=${validateRequest.filename}`
+  );
 }

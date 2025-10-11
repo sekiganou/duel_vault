@@ -46,6 +46,7 @@ model Tournament {
   updatedAt  DateTime? @updatedAt
   createdAt  DateTime  @default(now())
 
+  stages     TournamentStages[]
   matches    Match[]
   deckStats  TournamentDeckStats[]
 
@@ -109,4 +110,20 @@ model TournamentDeckStats {
 
   @@unique([tournamentId, deckId])
   @@map("tournament_deck_stats")
+}
+
+model TournamentStages {
+  id          Int      @id @default(autoincrement())
+
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournamentId Int
+
+  name        String
+  order       Int
+
+  fileKey    String    // S3 key for the stage file (e.g., JSON or CSV)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime? @updatedAt
+
+  @@map("tournament_stages")
 }

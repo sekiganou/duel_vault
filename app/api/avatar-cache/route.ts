@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withErrorHandler } from "@/lib/middlewares/withErrorHandler";
 import { client } from "@/client";
-import { getMinioClient, IMAGE_BUCKET } from "@/s3";
+import { IMAGE_BUCKET } from "@/s3/buckets";
+import { getMinioClient } from "@/s3";
 
 export const GET = withErrorHandler(async () => {
   // Get all decks with avatars

@@ -1,6 +1,5 @@
 import { client } from "@/client";
 import { withErrorHandler } from "@/lib/middlewares/withErrorHandler";
-import { getMinioClient, IMAGE_BUCKET } from "@/s3";
 import { NextRequest, NextResponse } from "next/server";
 
 const schema = client.deck;

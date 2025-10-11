@@ -1,7 +1,8 @@
 import { client } from "@/client";
 import { withErrorHandler } from "@/lib/middlewares/withErrorHandler";
 import { DeleteDecksSchema, UpsertDeckSchema } from "@/lib/schemas/decks";
-import { getMinioClient, IMAGE_BUCKET } from "@/s3";
+import { getMinioClient } from "@/s3";
+import { IMAGE_BUCKET } from "@/s3/buckets";
 import { NextRequest, NextResponse } from "next/server";
 import z from "zod";
 
