@@ -5,6 +5,7 @@ import {
   Match,
   Tournament,
   TournamentDeckStats,
+  TournamentStages,
 } from "@/generated/prisma";
 import { SVGProps } from "react";
 
@@ -87,6 +88,14 @@ export type TournamentWithRelations = Tournament & {
   })[];
   deckStats: (TournamentDeckStats & {
     deck: DeckWithRelations;
+  })[];
+  stages: (TournamentStages & {
+    data: {
+      stages: [];
+      matches: [];
+      matchGames: [];
+      participants: [];
+    };
   })[];
 };
 

@@ -242,7 +242,10 @@ const UpsertModal = ({
       endDate: tournamentEndDate ? new Date(tournamentEndDate) : undefined,
       notes: tournamentNotes || undefined,
       link: tournamentLink || undefined,
-      participants: Array.from(tournamentParticipants).map((p) => Number(p)),
+      participants: Array.from(tournamentParticipants).map((p) => ({
+        id: Number(p),
+        name: mappedDecksIdName.get(Number(p))!,
+      })),
     };
 
     const operation = isEdit

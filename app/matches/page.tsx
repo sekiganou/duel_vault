@@ -201,6 +201,7 @@ const UpsertModal = ({
       deckBScore: Number(deckBScore),
       notes: notes || null,
       date: new Date(date).toISOString(),
+      bracket: null,
     })
       .then(() => {
         handleGetAllMatches();

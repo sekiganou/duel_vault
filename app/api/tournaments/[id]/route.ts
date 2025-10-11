@@ -1,8 +1,9 @@
 import { client } from "@/client";
 import { withErrorHandler } from "@/lib/middlewares/withErrorHandler";
 import { UpsertTournamentSchema } from "@/lib/schemas/tournaments";
+import { getMinioClient } from "@/s3";
+import { BRACKET_BUCKET } from "@/s3/buckets";
 import { NextRequest, NextResponse } from "next/server";
-import { da } from "zod/v4/locales/index.cjs";
 
 export const GET = withErrorHandler(async (req: NextRequest) => {
   const url = new URL(req.url);
@@ -21,6 +22,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
       id: id,
     },
     include: {
+      stages: true,
       format: true,
       matches: {
         include: {
@@ -67,6 +69,24 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     );
   }
 
+  for (const stage of tournament.stages) {
+    if (stage.fileKey) {
+      const minio = getMinioClient();
+      try {
+        stage.fileKey = await minio.presignedGetObject(
+          BRACKET_BUCKET,
+          stage.fileKey,
+          24 * 60 * 60 // 24 hours
+        );
+      } catch (error) {
+        console.error(
+          `Error generating presigned URL for ${stage.fileKey}:`,
+          error
+        );
+      }
+    }
+  }
+
   return NextResponse.json(tournament);
 });
 
@@ -108,8 +128,29 @@ export const DELETE = withErrorHandler(async (req: NextRequest) => {
     );
   }
 
-  await client.tournament.delete({
-    where: { id: id },
+  await client.$transaction(async (tx) => {
+    const minio = getMinioClient();
+
+    await tx.tournamentStages
+      .findMany({
+        where: { tournamentId: id },
+      })
+      .then(async (stages) => {
+        for (const stage of stages) {
+          try {
+            await minio.removeObject(BRACKET_BUCKET, stage.fileKey);
+          } catch (error) {
+            console.error(
+              `Error deleting bracket file ${stage.fileKey}:`,
+              error
+            );
+          }
+        }
+      });
+
+    await tx.tournament.delete({
+      where: { id: id },
+    });
   });
 
   return NextResponse.json({ success: true, deletedId: id });

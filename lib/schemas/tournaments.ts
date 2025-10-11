@@ -9,7 +9,7 @@ export const UpsertTournamentSchema = z.object({
   notes: z.string().optional(),
   link: z.string().url().optional().or(z.literal("")),
   participants: z
-    .array(z.number())
+    .array(z.object({ id: z.number(), name: z.string() }))
     .min(2, "At least 2 partecipants are required"),
 });
 

@@ -7,6 +7,11 @@ import { withErrorHandler } from "@/lib/middlewares/withErrorHandler";
 import { DeleteMatchesSchema, UpsertMatchSchema } from "@/lib/schemas/matches";
 import { NextRequest, NextResponse } from "next/server";
 import z from "zod";
+import { JsonDatabase } from "brackets-json-db";
+import { BracketsManager } from "brackets-manager";
+import { getMinioClient } from "@/s3";
+import fs from "fs";
+import { BRACKET_BUCKET } from "@/s3/buckets";
 
 type MatchResult = "win" | "loss" | "tie";
 
@@ -101,14 +106,14 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     );
   }
 
-  const { id, date, ...dataWithoutId } = parsed.data;
+  const { id, date, bracket, ...dataWithoutId } = parsed.data;
   const matchData = {
     ...dataWithoutId,
     date: new Date(date),
   };
 
   // Use a single transaction to ensure data consistency
-  const result = await client.$transaction(async (tx) => {
+  const updatedMatch = await client.$transaction(async (tx) => {
     // Get existing match data only if we're updating (not creating)
     const matchBefore = id
       ? await tx.match.findUnique({
@@ -231,7 +236,55 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     return updatedMatch;
   });
 
-  return NextResponse.json({ success: true, item: result });
+  if (bracket != null) {
+    try {
+      const filename = `tournament-${matchData.tournamentId}-stage-1.json`;
+
+      const minio = getMinioClient();
+      const fileStream = await minio.getObject(BRACKET_BUCKET, filename);
+
+      // Convert stream to string
+      const chunks = [];
+      for await (const chunk of fileStream) {
+        chunks.push(chunk);
+      }
+      const fileContent = Buffer.concat(chunks).toString();
+
+      // Write the file locally so JsonDatabase can read it
+      await fs.promises.writeFile(filename, fileContent);
+
+      // Initialize the storage and manager
+      const storage = new JsonDatabase(filename);
+      const manager = new BracketsManager(storage);
+
+      await manager.update.match({
+        id: bracket.matchId,
+        opponent1: {
+          id: bracket.opponent1,
+          score: updatedMatch.deckAScore,
+          result:
+            updatedMatch.deckAScore > updatedMatch.deckBScore
+              ? "win"
+              : updatedMatch.deckAScore < updatedMatch.deckBScore
+                ? "loss"
+                : "draw",
+        },
+        opponent2: { id: bracket.opponent2, score: updatedMatch.deckBScore },
+      });
+
+      // Save the updated bracket back to MinIO
+      const updatedContent = await fs.promises.readFile(filename, "utf-8");
+      await minio.putObject(BRACKET_BUCKET, filename, updatedContent);
+
+      // Clean up the local file
+      await fs.promises.unlink(filename);
+    } catch (bracketError) {
+      console.error("Error updating bracket:", bracketError);
+      // Don't throw here - the match was already saved successfully
+      // Just log the error and continue
+    }
+  }
+  return NextResponse.json({ success: true, item: updatedMatch });
 });
 
 export const DELETE = withErrorHandler(async (req: NextRequest) => {

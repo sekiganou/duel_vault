@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosResponse } from "axios";
 import { TournamentWithRelations } from "@/types";
 import { addToast } from "@heroui/toast";
 import { getAvatarUrl } from "./avatarCache";
@@ -38,7 +38,41 @@ export async function getTournamentById(
       }
     }
   });
-  return res.data;
+  await Promise.all(
+    tournament.stages.map(async (stage) => {
+      if (stage.fileKey) {
+        try {
+          stage.data = {
+            stages: [],
+            matches: [],
+            matchGames: [],
+            participants: [],
+          };
+          const response: AxiosResponse<{
+            stage: [];
+            match: [];
+            match_game: [];
+            participant: [];
+          }> = await axios.get(stage.fileKey);
+
+          // Map the response data correctly
+          stage.data.stages = response.data.stage || [];
+          stage.data.matches = response.data.match || [];
+          stage.data.matchGames = response.data.match_game || [];
+          stage.data.participants = response.data.participant || [];
+        } catch (error) {
+          console.error("Error parsing stage fileKey JSON:", error);
+          stage.data = {
+            stages: [],
+            matches: [],
+            matchGames: [],
+            participants: [],
+          };
+        }
+      }
+    })
+  );
+  return tournament;
 }
 
 export async function createTournament(tournament: {
@@ -48,7 +82,7 @@ export async function createTournament(tournament: {
   endDate?: string | Date;
   notes?: string;
   link?: string;
-  participants: Array<number>;
+  participants: Array<{ id: number; name: string }>;
 }) {
   try {
     const res = await axios.post(basePath, tournament);
@@ -74,7 +108,7 @@ export async function updateTournament(tournament: {
   endDate?: string | Date;
   notes?: string;
   link?: string;
-  participants: Array<number>;
+  participants: Array<{ id: number; name: string }>;
 }) {
   try {
     const { participants, ...data } = tournament;

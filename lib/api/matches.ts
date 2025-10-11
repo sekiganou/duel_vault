@@ -192,6 +192,11 @@ export async function upsertMatch(match: {
   deckBScore: number;
   notes: string | null;
   date: string;
+  bracket: {
+    matchId: number;
+    opponent1: number;
+    opponent2: number;
+  } | null;
 }) {
   try {
     const validateMatch = UpsertMatchSchema.parse(match);

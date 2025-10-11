@@ -37,6 +37,14 @@ export default function RootLayout({
       <head>
         <meta name="apple-mobile-web-app-title" content="Duel Vault" />
         <link rel="apple-touch-icon" sizes="any" href="/logo-dark.png" />
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/brackets-viewer@latest/dist/brackets-viewer.min.css"
+        />
+        <script
+          type="text/javascript"
+          src="https://cdn.jsdelivr.net/npm/brackets-viewer@latest/dist/brackets-viewer.min.js"
+        ></script>
       </head>
       <body
         className={clsx(

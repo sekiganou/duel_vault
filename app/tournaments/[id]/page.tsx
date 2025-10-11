@@ -1,9 +1,38 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+
+// Declare window.bracketsViewer for TypeScript
+declare global {
+  interface Window {
+    bracketsViewer?: {
+      setParticipantImages: (
+        participants: { participantId: number; imageUrl: string }[]
+      ) => void;
+      onMatchClicked: (match: any) => void;
+      render: (
+        data: {
+          stages: any[];
+          matches: any[];
+          matchGames: any[];
+          participants: any[];
+        },
+        options?: {
+          selector?: string;
+          [key: string]: any;
+        }
+      ) => string | void;
+    };
+  }
+}
+
+import { useEffect, useRef, useState } from "react";
 import { getTournamentById } from "@/lib/api/tournaments";
-import { CardTabItem, TournamentWithRelations } from "@/types";
+import {
+  CardTabItem,
+  DeckWithRelations,
+  TournamentWithRelations,
+} from "@/types";
 import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Chip } from "@heroui/chip";
 import { Spinner } from "@heroui/spinner";
@@ -31,6 +60,19 @@ import {
 import { User } from "@heroui/user";
 import "@/lib/extensions/array";
 import { CardTabs } from "@/components/cardTabs";
+import { Deck } from "@/generated/prisma";
+import {
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  useDisclosure,
+} from "@heroui/modal";
+import { Input } from "@heroui/input";
+import { Avatar } from "@heroui/avatar";
+import { upsertMatch } from "@/lib/api/matches";
+import { BracketViewer } from "../BracketViewer";
 
 const getTournamentStatus = (tournament: TournamentWithRelations): string => {
   const now = new Date();
@@ -48,12 +90,15 @@ const statusColorMap: Record<string, "primary" | "success" | "default"> = {
   completed: "default",
 };
 
+const participantMap = new Map<string, DeckWithRelations>();
+
 export default function ViewTournamentPage() {
   const { id } = useParams();
   const router = useRouter();
   const [tournament, setTournament] = useState<TournamentWithRelations | null>(
     null
   );
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,7 +106,16 @@ export default function ViewTournamentPage() {
     setLoading(true);
     setError(null);
     getTournamentById(Number(id))
-      .then(setTournament)
+      .then((tournament) => {
+        setTournament(tournament);
+
+        tournament.deckStats.forEach((deckStat) =>
+          participantMap.set(
+            deckStat.deck.name,
+            deckStat.deck as DeckWithRelations
+          )
+        );
+      })
       .catch((err) => {
         setError(err.message || "Failed to load tournament");
       })
@@ -554,6 +608,40 @@ export default function ViewTournamentPage() {
                 </TableBody>
               </Table>
             ),
+          },
+          {
+            title: "Bracket",
+            key: "bracket",
+            emptyContent: {
+              header: "No Bracket Available",
+              text: "This tournament has no bracket yet.",
+              icon: (props) => <IconEye {...props} />,
+              displayEmptyContent:
+                !tournament.stages || tournament.stages.length === 0,
+            },
+            cardBody:
+              tournament.stages && tournament.stages.length > 0 ? (
+                <div>
+                  {tournament.stages.map((stage, index) => {
+                    if (!stage.fileKey) return null;
+
+                    return (
+                      <div key={index}>
+                        <BracketViewer
+                          tournamentId={tournament.id}
+                          participantMapName={participantMap}
+                          stageData={stage.data}
+                          stageId={stage.id}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-small text-default-500">
+                  No bracket data available for this tournament.
+                </p>
+              ),
           },
         ]}
       />

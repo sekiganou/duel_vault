@@ -8,6 +8,9 @@ import { NextRequest, NextResponse } from "next/server";
 import z from "zod";
 import { JsonDatabase } from "brackets-json-db";
 import { BracketsManager } from "brackets-manager";
+import fs from "fs";
+import { BRACKET_BUCKET } from "@/s3/buckets";
+import { getMinioClient } from "@/s3";
 
 export const GET = withErrorHandler(async () => {
   const items = await client.tournament.findMany({
@@ -36,6 +39,7 @@ export const GET = withErrorHandler(async () => {
         },
       },
       deckStats: true,
+      stages: true,
     },
     orderBy: {
       startDate: "desc",
@@ -76,14 +80,17 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     await tx.tournamentDeckStats.createMany({
       data: participants.map((participant) => ({
         tournamentId: tournament.id,
-        deckId: participant,
+        deckId: participant.id,
         wins: 0,
         losses: 0,
         ties: 0,
       })),
     });
 
-    const storage = new JsonDatabase();
+    const filename = `tournament-${tournament.id}-stage-1.json`;
+    const filepath = `./${filename}`;
+
+    const storage = new JsonDatabase(filename);
     const manager = new BracketsManager(storage);
 
     const name = "Example stage";
@@ -91,8 +98,44 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     await manager.create.stage({
       name: name,
       tournamentId: tournament.id, //
-      type: "single_elimination",
-      seeding: participants.map((deckId) => "Team " + deckId),
+      type: "double_elimination",
+      seeding: participants.map((participant) => participant.name),
+    });
+
+    const minio = getMinioClient();
+
+    const bucketExists = await minio.bucketExists(BRACKET_BUCKET);
+    if (!bucketExists) await minio.makeBucket(BRACKET_BUCKET);
+
+    // Direct upload method (alternative to pre-signed URL)
+    const fileContent = fs.readFileSync(filepath);
+    await minio.putObject(
+      BRACKET_BUCKET,
+      filename,
+      fileContent,
+      fileContent.length,
+      {
+        "Content-Type": "application/json",
+      }
+    );
+
+    await tx.tournamentStages.create({
+      data: {
+        tournamentId: tournament.id,
+        name: name,
+        order: 1,
+        fileKey: filename,
+      },
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      fs.unlink(filepath, (err) => {
+        if (err) reject(err);
+        else {
+          console.log("File removed!");
+          resolve();
+        }
+      });
     });
 
     return tournament.id;
@@ -114,8 +157,29 @@ export const DELETE = withErrorHandler(async (req: NextRequest) => {
 
   const ids = parsed.data;
 
-  await client.tournament.deleteMany({
-    where: { id: { in: ids } },
+  await client.$transaction(async (tx) => {
+    const minio = getMinioClient();
+
+    await tx.tournamentStages
+      .findMany({
+        where: { tournamentId: { in: ids } },
+      })
+      .then(async (stages) => {
+        for (const stage of stages) {
+          try {
+            await minio.removeObject(BRACKET_BUCKET, stage.fileKey);
+          } catch (error) {
+            console.error(
+              `Error deleting bracket file ${stage.fileKey}:`,
+              error
+            );
+          }
+        }
+      });
+
+    await tx.tournament.deleteMany({
+      where: { id: { in: ids } },
+    });
   });
 
   return NextResponse.json({ success: true, IDS: ids });
