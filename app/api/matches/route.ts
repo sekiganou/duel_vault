@@ -1,4 +1,4 @@
-import { db } from "@/db";
+import { client } from "@/client";
 import {
   getStatDecrements,
   updateTournamentDeckStats,
@@ -60,7 +60,7 @@ const calculateStatChanges = (
 };
 
 export const GET = withErrorHandler(async () => {
-  const items = await db.match.findMany({
+  const items = await client.match.findMany({
     include: {
       tournament: true,
       deckA: {
@@ -108,7 +108,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   };
 
   // Use a single transaction to ensure data consistency
-  const result = await db.$transaction(async (tx) => {
+  const result = await client.$transaction(async (tx) => {
     // Get existing match data only if we're updating (not creating)
     const matchBefore = id
       ? await tx.match.findUnique({
@@ -247,7 +247,7 @@ export const DELETE = withErrorHandler(async (req: NextRequest) => {
 
   const ids = parsed.data;
 
-  await db.$transaction(async (tx) => {
+  await client.$transaction(async (tx) => {
     // Get match details before deletion to update deck stats
     const matches = await tx.match.findMany({
       where: { id: { in: ids } },

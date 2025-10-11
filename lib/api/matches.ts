@@ -4,11 +4,13 @@ import { DeleteMatchesSchema, UpsertMatchSchema } from "../schemas/matches";
 import { addToast } from "@heroui/toast";
 import { MatchWithRelations } from "@/types";
 import { getAvatarUrl } from "./avatarCache";
-import { db } from "@/db";
+import { client } from "@/client";
 
 const basePath = "/api/matches";
 
-type PrismaTransaction = Parameters<Parameters<typeof db.$transaction>[0]>[0];
+type PrismaTransaction = Parameters<
+  Parameters<typeof client.$transaction>[0]
+>[0];
 
 export const statusColorMap: Record<string, "primary" | "secondary"> = {
   tournament: "primary",

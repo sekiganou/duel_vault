@@ -1,4 +1,4 @@
-import { db } from "@/db";
+import { client } from "@/client";
 import { withErrorHandler } from "@/lib/middlewares/withErrorHandler";
 import { UpsertTournamentSchema } from "@/lib/schemas/tournaments";
 import { NextRequest, NextResponse } from "next/server";
@@ -16,7 +16,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     );
   }
 
-  const tournament = await db.tournament.findUnique({
+  const tournament = await client.tournament.findUnique({
     where: {
       id: id,
     },
@@ -88,7 +88,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     );
   }
 
-  const updatedTournament = await db.tournament.update({
+  const updatedTournament = await client.tournament.update({
     where: { id: id },
     data: parsed.data,
   });
@@ -108,7 +108,7 @@ export const DELETE = withErrorHandler(async (req: NextRequest) => {
     );
   }
 
-  await db.tournament.delete({
+  await client.tournament.delete({
     where: { id: id },
   });
 

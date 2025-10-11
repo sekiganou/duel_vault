@@ -5,7 +5,7 @@ import {
   UpsertDeckSchema,
 } from "../schemas/decks";
 import { DeckWithRelations } from "@/types";
-import { getMinioClient, S3_BUCKET } from "@/s3";
+import { getMinioClient, IMAGE_BUCKET } from "@/s3";
 import { addToast } from "@heroui/toast";
 import { deleteFile, uploadFile } from "./minio";
 import { ChipProps } from "@heroui/chip";

@@ -1,4 +1,4 @@
-import { db } from "@/db";
+import { client } from "@/client";
 import { withErrorHandler } from "@/lib/middlewares/withErrorHandler";
 import {
   DeleteTournamentsSchema,
@@ -6,9 +6,11 @@ import {
 } from "@/lib/schemas/tournaments";
 import { NextRequest, NextResponse } from "next/server";
 import z from "zod";
+import { JsonDatabase } from "brackets-json-db";
+import { BracketsManager } from "brackets-manager";
 
 export const GET = withErrorHandler(async () => {
-  const items = await db.tournament.findMany({
+  const items = await client.tournament.findMany({
     include: {
       format: true,
       matches: {
@@ -63,7 +65,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     endDate: endDate ? new Date(endDate) : null,
   };
 
-  const ID = await db.$transaction(async (tx) => {
+  const ID = await client.$transaction(async (tx) => {
     const tournament = await tx.tournament.create({
       data: tournamentData,
       select: {
@@ -79,6 +81,16 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         losses: 0,
         ties: 0,
       })),
+    });
+
+    const storage = new JsonDatabase();
+    const manager = new BracketsManager(storage);
+
+    await manager.create.stage({
+      name: "Example stage",
+      tournamentId: tournament.id, //
+      type: "single_elimination",
+      seeding: participants.map((deckId) => "Team " + deckId),
     });
 
     return tournament.id;
@@ -100,7 +112,7 @@ export const DELETE = withErrorHandler(async (req: NextRequest) => {
 
   const ids = parsed.data;
 
-  await db.tournament.deleteMany({
+  await client.tournament.deleteMany({
     where: { id: { in: ids } },
   });
 
