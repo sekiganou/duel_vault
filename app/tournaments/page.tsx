@@ -58,6 +58,7 @@ import { getAllDecks } from "@/lib/api/decks";
 import { Avatar } from "@heroui/avatar";
 import { UpsertTournamentSchema } from "@/lib/schemas/tournaments";
 import z from "zod";
+import is from "zod/v4/locales/is.cjs";
 
 const columns: TableColumnDescriptor[] = [
   { name: "ID", uid: "id", sortable: true },
@@ -333,24 +334,25 @@ const UpsertModal = ({
                 isInvalid={!!tournamentNameInputError}
                 errorMessage={tournamentNameInputError}
               />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Select
-                  label="Format"
-                  placeholder="Select format"
-                  selectedKeys={[tournamentFormatId]}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                    setTournamentFormatId(e.target.value)
-                  }
-                  isRequired
-                >
-                  {formats.map((format) => (
-                    <SelectItem key={format.id.toString()}>
-                      {format.name}
-                    </SelectItem>
-                  ))}
-                </Select>
-                {!isEdit && (
-                  <>
+              {!isEdit && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Select
+                      label="Format"
+                      placeholder="Select format"
+                      selectedKeys={[tournamentFormatId]}
+                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                        setTournamentFormatId(e.target.value)
+                      }
+                      isRequired
+                    >
+                      {formats.map((format) => (
+                        <SelectItem key={format.id.toString()}>
+                          {format.name}
+                        </SelectItem>
+                      ))}
+                    </Select>
+
                     <Select
                       label="Type"
                       placeholder="Select type"
@@ -377,48 +379,55 @@ const UpsertModal = ({
                         Round Robin
                       </SelectItem>
                     </Select>
-                  </>
-                )}
-              </div>
+                  </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Select
-                  label="Grand Final Type"
-                  placeholder="Select grand final type"
-                  isDisabled={tournamentType === TournamentType.ROUND_ROBIN}
-                  selectedKeys={[grandFinalType]}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                    setGrandFinalType(e.target.value as GrandFinalType)
-                  }
-                >
-                  <SelectItem key={GrandFinalType.NONE}>None</SelectItem>
-                  <SelectItem key={GrandFinalType.SIMPLE}>Simple</SelectItem>
-                  <SelectItem key={GrandFinalType.DOUBLE}>Double</SelectItem>
-                </Select>
-                <Select
-                  label="Round Robin Mode"
-                  placeholder="Select round robin mode"
-                  isDisabled={tournamentType !== TournamentType.ROUND_ROBIN}
-                  selectedKeys={[roundRobinMode]}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                    setRoundRobinMode(e.target.value as RoundRobinMode)
-                  }
-                >
-                  <SelectItem key={RoundRobinMode.SIMPLE}>Simple</SelectItem>
-                  <SelectItem key={RoundRobinMode.DOUBLE}>Double</SelectItem>
-                </Select>
-                <Input
-                  label="Group Count"
-                  placeholder="Select number of groups"
-                  type="number"
-                  min={1}
-                  value={groupCount.toString()}
-                  onChange={(e) => setGroupCount(Number(e.target.value))}
-                  className="w-full"
-                  isDisabled={tournamentType !== TournamentType.ROUND_ROBIN}
-                />
-              </div>
-
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Select
+                      label="Grand Final Type"
+                      placeholder="Select grand final type"
+                      isDisabled={tournamentType === TournamentType.ROUND_ROBIN}
+                      selectedKeys={[grandFinalType]}
+                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                        setGrandFinalType(e.target.value as GrandFinalType)
+                      }
+                    >
+                      <SelectItem key={GrandFinalType.NONE}>None</SelectItem>
+                      <SelectItem key={GrandFinalType.SIMPLE}>
+                        Simple
+                      </SelectItem>
+                      <SelectItem key={GrandFinalType.DOUBLE}>
+                        Double
+                      </SelectItem>
+                    </Select>
+                    <Select
+                      label="Round Robin Mode"
+                      placeholder="Select round robin mode"
+                      isDisabled={tournamentType !== TournamentType.ROUND_ROBIN}
+                      selectedKeys={[roundRobinMode]}
+                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                        setRoundRobinMode(e.target.value as RoundRobinMode)
+                      }
+                    >
+                      <SelectItem key={RoundRobinMode.SIMPLE}>
+                        Simple
+                      </SelectItem>
+                      <SelectItem key={RoundRobinMode.DOUBLE}>
+                        Double
+                      </SelectItem>
+                    </Select>
+                    <Input
+                      label="Group Count"
+                      placeholder="Select number of groups"
+                      type="number"
+                      min={1}
+                      value={groupCount.toString()}
+                      onChange={(e) => setGroupCount(Number(e.target.value))}
+                      className="w-full"
+                      isDisabled={tournamentType !== TournamentType.ROUND_ROBIN}
+                    />
+                  </div>
+                </>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
                   type="datetime-local"
@@ -434,7 +443,6 @@ const UpsertModal = ({
                   onChange={(e) => setTournamentEndDate(e.target.value)}
                 />
               </div>
-
               <Select
                 label="Participants"
                 placeholder="Select all the participants"
@@ -499,7 +507,6 @@ const UpsertModal = ({
                   </SelectItem>
                 ))}
               </Select>
-
               <Input
                 label="Notes (Optional)"
                 placeholder="Add tournament notes or description"

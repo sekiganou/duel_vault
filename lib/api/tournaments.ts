@@ -121,17 +121,9 @@ export async function updateTournament(tournament: {
   notes?: string;
   link?: string;
   participants: Array<{ id: number; name: string }>;
-  bracket: {
-    type: TournamentType;
-    settings: {
-      grandFinal?: GrandFinalType;
-      groupCount?: number;
-      roundRobinMode?: string;
-    };
-  };
 }) {
   try {
-    const { participants, bracket, ...data } = tournament;
+    const { participants, ...data } = tournament;
     const res = await axios.post(`${basePath}/${tournament.id}`, data);
     addToast({
       title: "Tournament updated successfully",

@@ -98,6 +98,8 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const body = await req.json();
   const parsed = UpsertTournamentSchema.omit({
     id: true,
+    formatId: true,
+    bracket: true,
     participants: true,
   }).safeParse(body);
 
