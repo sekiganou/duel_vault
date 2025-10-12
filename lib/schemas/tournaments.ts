@@ -1,3 +1,4 @@
+import { GrandFinalType, RoundRobinMode, TournamentType } from "@/types";
 import z from "zod";
 
 export const UpsertTournamentSchema = z.object({
@@ -11,6 +12,15 @@ export const UpsertTournamentSchema = z.object({
   participants: z
     .array(z.object({ id: z.number(), name: z.string() }))
     .min(2, "At least 2 partecipants are required"),
+  bracket: z.object({
+    type: z.enum(TournamentType),
+    settings: z.object({
+      grandFinal: z.enum(GrandFinalType).optional(),
+      groupCount: z.number().min(1).optional(),
+      roundRobinMode: z.enum(RoundRobinMode).optional(),
+      // seedOrdering: z.array(z.string()).optional(),
+    }),
+  }),
 });
 
 export const DeleteTournamentsSchema = z.array(z.number());

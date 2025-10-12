@@ -14,6 +14,9 @@ import {
   StatusOptionDescriptor,
   TableColumnDescriptor,
   DeckWithRelations,
+  TournamentType,
+  GrandFinalType,
+  RoundRobinMode,
 } from "@/types";
 
 import {
@@ -53,6 +56,8 @@ import { capitalize, FullTable } from "@/components/fullTable";
 import { useRouter } from "next/navigation";
 import { getAllDecks } from "@/lib/api/decks";
 import { Avatar } from "@heroui/avatar";
+import { UpsertTournamentSchema } from "@/lib/schemas/tournaments";
+import z from "zod";
 
 const columns: TableColumnDescriptor[] = [
   { name: "ID", uid: "id", sortable: true },
@@ -173,6 +178,20 @@ const UpsertModal = ({
   const [mappedDecksIdName, setMappedDecksIdName] = useState<
     Map<number, string>
   >(new Map());
+
+  const [tournamentType, setTournamentType] = useState<string>(
+    TournamentType.SINGLE_ELIMINATION
+  );
+
+  const [grandFinalType, setGrandFinalType] = useState<string>(
+    GrandFinalType.NONE
+  );
+  const [roundRobinMode, setRoundRobinMode] = useState<string>(
+    RoundRobinMode.SIMPLE
+  );
+
+  const [groupCount, setGroupCount] = useState<number>(1);
+
   const [tournamentName, setTournamentName] = useState("");
   const [tournamentFormatId, setTournamentFormatId] = useState("");
   const [tournamentStartDate, setTournamentStartDate] = useState("");
@@ -219,6 +238,10 @@ const UpsertModal = ({
         new Set(tournament.deckStats.map((ds) => ds.deckId.toString()))
       );
     } else {
+      setTournamentType(TournamentType.SINGLE_ELIMINATION);
+      setGrandFinalType(GrandFinalType.NONE);
+      setRoundRobinMode(RoundRobinMode.SIMPLE);
+      setGroupCount(1);
       setTournamentName("");
       setTournamentFormatId("");
       setTournamentStartDate(new Date().toISOString().slice(0, 16));
@@ -246,6 +269,14 @@ const UpsertModal = ({
         id: Number(p),
         name: mappedDecksIdName.get(Number(p))!,
       })),
+      bracket: {
+        type: tournamentType as TournamentType,
+        settings: {
+          grandFinal: grandFinalType as GrandFinalType,
+          groupCount: groupCount,
+          roundRobinMode: roundRobinMode as RoundRobinMode,
+        },
+      },
     };
 
     const operation = isEdit
@@ -281,31 +312,28 @@ const UpsertModal = ({
               {isEdit ? tournament?.name : ""}
             </ModalHeader>
 
-            <ModalBody className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input
-                  placeholder="Tournament name"
-                  type="text"
-                  label="Name"
-                  isRequired
-                  isClearable
-                  value={tournamentName}
-                  onValueChange={(val) => {
-                    setTournamentName(val);
-                    if (val.trim()) setTournamentNameInputError("");
-                    else if (val === "")
-                      setTournamentNameInputError(
-                        "Please fill out this field."
-                      );
-                  }}
-                  onClear={() => {
-                    setTournamentName("");
+            <ModalBody className="space-y-2">
+              <Input
+                placeholder="Tournament name"
+                type="text"
+                label="Name"
+                isRequired
+                isClearable
+                value={tournamentName}
+                onValueChange={(val) => {
+                  setTournamentName(val);
+                  if (val.trim()) setTournamentNameInputError("");
+                  else if (val === "")
                     setTournamentNameInputError("Please fill out this field.");
-                  }}
-                  isInvalid={!!tournamentNameInputError}
-                  errorMessage={tournamentNameInputError}
-                />
-
+                }}
+                onClear={() => {
+                  setTournamentName("");
+                  setTournamentNameInputError("Please fill out this field.");
+                }}
+                isInvalid={!!tournamentNameInputError}
+                errorMessage={tournamentNameInputError}
+              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Select
                   label="Format"
                   placeholder="Select format"
@@ -321,7 +349,77 @@ const UpsertModal = ({
                     </SelectItem>
                   ))}
                 </Select>
+                {!isEdit && (
+                  <>
+                    <Select
+                      label="Type"
+                      placeholder="Select type"
+                      selectedKeys={[tournamentType]}
+                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                        setTournamentType(e.target.value as TournamentType)
+                      }
+                      isRequired
+                      // description={
+                      //   tournamentType === TournamentType.SINGLE_ELIMINATION
+                      //     ? "Single elimination bracket - lose once and you're out"
+                      //     : tournamentType === TournamentType.DOUBLE_ELIMINATION
+                      //       ? "Double elimination bracket - winners and losers brackets"
+                      //       : "Round robin - everyone plays everyone"
+                      // }
+                    >
+                      <SelectItem key={TournamentType.SINGLE_ELIMINATION}>
+                        Single Elimination
+                      </SelectItem>
+                      <SelectItem key={TournamentType.DOUBLE_ELIMINATION}>
+                        Double Elimination
+                      </SelectItem>
+                      <SelectItem key={TournamentType.ROUND_ROBIN}>
+                        Round Robin
+                      </SelectItem>
+                    </Select>
+                  </>
+                )}
+              </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Select
+                  label="Grand Final Type"
+                  placeholder="Select grand final type"
+                  isDisabled={tournamentType === TournamentType.ROUND_ROBIN}
+                  selectedKeys={[grandFinalType]}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                    setGrandFinalType(e.target.value as GrandFinalType)
+                  }
+                >
+                  <SelectItem key={GrandFinalType.NONE}>None</SelectItem>
+                  <SelectItem key={GrandFinalType.SIMPLE}>Simple</SelectItem>
+                  <SelectItem key={GrandFinalType.DOUBLE}>Double</SelectItem>
+                </Select>
+                <Select
+                  label="Round Robin Mode"
+                  placeholder="Select round robin mode"
+                  isDisabled={tournamentType !== TournamentType.ROUND_ROBIN}
+                  selectedKeys={[roundRobinMode]}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                    setRoundRobinMode(e.target.value as RoundRobinMode)
+                  }
+                >
+                  <SelectItem key={RoundRobinMode.SIMPLE}>Simple</SelectItem>
+                  <SelectItem key={RoundRobinMode.DOUBLE}>Double</SelectItem>
+                </Select>
+                <Input
+                  label="Group Count"
+                  placeholder="Select number of groups"
+                  type="number"
+                  min={1}
+                  value={groupCount.toString()}
+                  onChange={(e) => setGroupCount(Number(e.target.value))}
+                  className="w-full"
+                  isDisabled={tournamentType !== TournamentType.ROUND_ROBIN}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
                   type="datetime-local"
                   label="Start Date"
@@ -329,20 +427,11 @@ const UpsertModal = ({
                   value={tournamentStartDate}
                   onChange={(e) => setTournamentStartDate(e.target.value)}
                 />
-
                 <Input
                   type="datetime-local"
                   label="End Date (Optional)"
                   value={tournamentEndDate}
                   onChange={(e) => setTournamentEndDate(e.target.value)}
-                />
-
-                <Input
-                  type="url"
-                  label="Link (Optional)"
-                  placeholder="https://..."
-                  value={tournamentLink}
-                  onChange={(e) => setTournamentLink(e.target.value)}
                 />
               </div>
 

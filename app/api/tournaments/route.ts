@@ -60,7 +60,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     );
   }
 
-  const { id, startDate, endDate, participants, ...dataWithoutId } =
+  const { id, startDate, endDate, participants, bracket, ...dataWithoutId } =
     parsed.data;
 
   const tournamentData = {
@@ -68,6 +68,9 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     startDate: new Date(startDate),
     endDate: endDate ? new Date(endDate) : null,
   };
+
+  const getFileName = (tournamentId: number, stageOrder: number) =>
+    `tournament-${tournamentId}-stage-${stageOrder}.json`;
 
   const ID = await client.$transaction(async (tx) => {
     const tournament = await tx.tournament.create({
@@ -87,19 +90,25 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       })),
     });
 
-    const filename = `tournament-${tournament.id}-stage-1.json`;
+    const filename = getFileName(tournament.id, 1);
     const filepath = `./${filename}`;
 
     const storage = new JsonDatabase(filename);
     const manager = new BracketsManager(storage);
 
-    const name = "Example stage";
+    const name = "Stage 1";
 
     await manager.create.stage({
       name: name,
       tournamentId: tournament.id, //
-      type: "double_elimination",
+      type: bracket.type,
       seeding: participants.map((participant) => participant.name),
+
+      settings: {
+        grandFinal: bracket.settings.grandFinal,
+        groupCount: bracket.settings.groupCount,
+        roundRobinMode: bracket.settings.roundRobinMode,
+      },
     });
 
     const minio = getMinioClient();
@@ -128,17 +137,17 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       },
     });
 
-    await new Promise<void>((resolve, reject) => {
-      fs.unlink(filepath, (err) => {
-        if (err) reject(err);
-        else {
-          console.log("File removed!");
-          resolve();
-        }
-      });
-    });
-
     return tournament.id;
+  });
+
+  await new Promise<void>((resolve, reject) => {
+    fs.unlink(getFileName(ID, 1), (err) => {
+      if (err) reject(err);
+      else {
+        console.log("File removed!");
+        resolve();
+      }
+    });
   });
 
   return NextResponse.json({ success: true, createdId: ID });

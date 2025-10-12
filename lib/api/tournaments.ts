@@ -1,5 +1,9 @@
 import axios, { AxiosResponse } from "axios";
-import { TournamentWithRelations } from "@/types";
+import {
+  GrandFinalType,
+  TournamentType,
+  TournamentWithRelations,
+} from "@/types";
 import { addToast } from "@heroui/toast";
 import { getAvatarUrl } from "./avatarCache";
 import { DeleteTournamentsSchema } from "../schemas/tournaments";
@@ -83,6 +87,14 @@ export async function createTournament(tournament: {
   notes?: string;
   link?: string;
   participants: Array<{ id: number; name: string }>;
+  bracket: {
+    type: TournamentType;
+    settings: {
+      grandFinal?: GrandFinalType;
+      groupCount?: number;
+      roundRobinMode?: string;
+    };
+  };
 }) {
   try {
     const res = await axios.post(basePath, tournament);
@@ -109,9 +121,17 @@ export async function updateTournament(tournament: {
   notes?: string;
   link?: string;
   participants: Array<{ id: number; name: string }>;
+  bracket: {
+    type: TournamentType;
+    settings: {
+      grandFinal?: GrandFinalType;
+      groupCount?: number;
+      roundRobinMode?: string;
+    };
+  };
 }) {
   try {
-    const { participants, ...data } = tournament;
+    const { participants, bracket, ...data } = tournament;
     const res = await axios.post(`${basePath}/${tournament.id}`, data);
     addToast({
       title: "Tournament updated successfully",

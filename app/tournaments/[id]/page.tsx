@@ -72,7 +72,7 @@ import {
 import { Input } from "@heroui/input";
 import { Avatar } from "@heroui/avatar";
 import { upsertMatch } from "@/lib/api/matches";
-import { BracketViewer } from "../BracketViewer";
+import { BracketViewer } from "./BracketViewer";
 
 const getTournamentStatus = (tournament: TournamentWithRelations): string => {
   const now = new Date();
@@ -90,7 +90,7 @@ const statusColorMap: Record<string, "primary" | "success" | "default"> = {
   completed: "default",
 };
 
-const participantMap = new Map<string, DeckWithRelations>();
+const participantMapName = new Map<string, DeckWithRelations>();
 
 export default function ViewTournamentPage() {
   const { id } = useParams();
@@ -102,24 +102,25 @@ export default function ViewTournamentPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    setLoading(true);
-    setError(null);
+  const handleGetTournamentById = () => {
     getTournamentById(Number(id))
       .then((tournament) => {
         setTournament(tournament);
-
-        tournament.deckStats.forEach((deckStat) =>
-          participantMap.set(
-            deckStat.deck.name,
-            deckStat.deck as DeckWithRelations
-          )
-        );
+        participantMapName.clear();
+        tournament.deckStats.forEach((deckStat) => {
+          participantMapName.set(deckStat.deck.name, deckStat.deck);
+        });
       })
       .catch((err) => {
         setError(err.message || "Failed to load tournament");
       })
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    handleGetTournamentById();
   }, [id]);
 
   useEffect(() => {
@@ -134,7 +135,7 @@ export default function ViewTournamentPage() {
         });
       }
     }
-  }, [tournament]);
+  }, [id]);
 
   if (loading) {
     return (
@@ -194,7 +195,8 @@ export default function ViewTournamentPage() {
   }
 
   const status = getTournamentStatus(tournament);
-  const totalMatches = tournament.matches.length;
+  const totalMatches = tournament.stages[0].data.matches.length;
+  const matchesPlayed = tournament.matches.length;
 
   // Calculate tournament duration
   const startDate = new Date(tournament.startDate);
@@ -342,7 +344,7 @@ export default function ViewTournamentPage() {
               <span className="text-small text-default-500">
                 Matches Played
               </span>
-              <span className="text-small font-medium">{totalMatches}</span>
+              <span className="text-small font-medium">{matchesPlayed}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-small text-default-500">Format</span>
@@ -628,8 +630,9 @@ export default function ViewTournamentPage() {
                     return (
                       <div key={index}>
                         <BracketViewer
+                          handleGetTournamentById={handleGetTournamentById}
                           tournamentId={tournament.id}
-                          participantMapName={participantMap}
+                          participantMapName={participantMapName}
                           stageData={stage.data}
                           stageId={stage.id}
                         />
