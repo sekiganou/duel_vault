@@ -12,6 +12,16 @@ const basePath = "/api/tournaments";
 
 export async function getAllTournaments(): Promise<TournamentWithRelations[]> {
   const res = await axios.get(basePath);
+  for (const tournament of res.data as TournamentWithRelations[]) {
+    tournament.deckStats.map(async (deckStat) => {
+      if (deckStat.deck.avatar) {
+        const presignedUrl = await getAvatarUrl(deckStat.deck.avatar);
+        if (presignedUrl) {
+          deckStat.deck.avatar = presignedUrl;
+        }
+      }
+    });
+  }
   return res.data;
 }
 
@@ -113,14 +123,15 @@ export async function createTournament(tournament: {
 }
 
 export async function updateTournament(tournament: {
-  id: string;
-  name: string;
-  formatId: number;
-  startDate: string | Date;
+  id?: string;
+  name?: string;
+  formatId?: number;
+  startDate?: string | Date;
   endDate?: string | Date;
   notes?: string;
   link?: string;
-  participants: Array<{ id: number; name: string }>;
+  status?: string;
+  participants?: Array<{ id: number; name: string }>;
 }) {
   try {
     const { participants, ...data } = tournament;

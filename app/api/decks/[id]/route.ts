@@ -1,4 +1,5 @@
 import { client } from "@/client";
+import { sortByPosition } from "@/lib/extensions/tournamentStats";
 import { withErrorHandler } from "@/lib/middlewares/withErrorHandler";
 import { NextRequest, NextResponse } from "next/server";
 

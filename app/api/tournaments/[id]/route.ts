@@ -4,6 +4,9 @@ import { UpsertTournamentSchema } from "@/lib/schemas/tournaments";
 import { getMinioClient } from "@/s3";
 import { BRACKET_BUCKET } from "@/s3/buckets";
 import { NextRequest, NextResponse } from "next/server";
+import "@/lib/extensions/array";
+import { sortByPosition } from "@/lib/extensions/tournamentStats";
+import { TournamentDeckStats, TournamentStatus } from "@/generated/prisma";
 
 export const GET = withErrorHandler(async (req: NextRequest) => {
   const url = new URL(req.url);
@@ -58,6 +61,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
             },
           },
         },
+        orderBy: [{ position: "asc" }, { wins: "desc" }, { losses: "asc" }],
       },
     },
   });
@@ -110,12 +114,32 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     );
   }
 
-  const updatedTournament = await client.tournament.update({
-    where: { id: id },
-    data: parsed.data,
-  });
+  if (parsed.data.status === TournamentStatus.COMPLETED) {
+    const orderedDeckStats: TournamentDeckStats[] = sortByPosition(
+      await client.tournamentDeckStats.findMany({
+        where: { tournamentId: id },
+      }),
+      await client.match.findMany({
+        where: { tournamentId: id },
+      })
+    );
 
-  return NextResponse.json(updatedTournament);
+    await client.$transaction(async (tx) => {
+      for (let i = 0; i < orderedDeckStats.length; i++) {
+        await tx.tournamentDeckStats.update({
+          where: { id: orderedDeckStats[i].id },
+          data: { position: i + 1 },
+        });
+      }
+
+      await tx.tournament.update({
+        where: { id: id },
+        data: parsed.data,
+      });
+    });
+  }
+
+  return NextResponse.json({ success: true, updatedId: id });
 });
 
 export const DELETE = withErrorHandler(async (req: NextRequest) => {

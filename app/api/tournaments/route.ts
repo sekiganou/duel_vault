@@ -11,6 +11,7 @@ import { BracketsManager } from "brackets-manager";
 import fs from "fs";
 import { BRACKET_BUCKET } from "@/s3/buckets";
 import { getMinioClient } from "@/s3";
+import { TournamentStatus } from "@/generated/prisma";
 
 export const GET = withErrorHandler(async () => {
   const items = await client.tournament.findMany({
@@ -38,7 +39,16 @@ export const GET = withErrorHandler(async () => {
           },
         },
       },
-      deckStats: true,
+      deckStats: {
+        include: {
+          deck: {
+            include: {
+              archetype: true,
+              format: true,
+            },
+          },
+        },
+      },
       stages: true,
     },
     orderBy: {
@@ -62,9 +72,12 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
   const { id, startDate, endDate, participants, bracket, ...dataWithoutId } =
     parsed.data;
-
   const tournamentData = {
     ...dataWithoutId,
+    status:
+      new Date(startDate) > new Date()
+        ? TournamentStatus.UPCOMING
+        : TournamentStatus.ONGOING,
     startDate: new Date(startDate),
     endDate: endDate ? new Date(endDate) : null,
   };

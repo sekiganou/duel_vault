@@ -34,6 +34,12 @@ model Deck {
   @@map("decks")
 }
 
+enum TournamentStatus {
+  UPCOMING
+  ONGOING
+  COMPLETED
+}
+
 model Tournament {
   id         Int       @id @default(autoincrement())
   name       String
@@ -45,6 +51,7 @@ model Tournament {
   link       String?
   updatedAt  DateTime? @updatedAt
   createdAt  DateTime  @default(now())
+  status     TournamentStatus @default(UPCOMING)
 
   stages     TournamentStages[]
   matches    Match[]
@@ -55,7 +62,7 @@ model Tournament {
 
 model Match {
   id            Int       @id @default(autoincrement())
-  tournament    Tournament? @relation(fields: [tournamentId], references: [id],  onDelete: SetNull)
+  tournament    Tournament? @relation(fields: [tournamentId], references: [id],  onDelete: Cascade)
   tournamentId  Int?
 
   deckA         Deck      @relation("DeckA", fields: [deckAId], references: [id])
@@ -103,6 +110,8 @@ model TournamentDeckStats {
 
   deck         Deck       @relation(fields: [deckId], references: [id])
   deckId       Int
+
+  position     Int?
 
   wins         Int
   losses       Int

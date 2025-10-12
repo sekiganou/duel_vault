@@ -1,3 +1,4 @@
+import { TournamentStatus } from "@/generated/prisma";
 import { GrandFinalType, RoundRobinMode, TournamentType } from "@/types";
 import z from "zod";
 
@@ -9,6 +10,7 @@ export const UpsertTournamentSchema = z.object({
   endDate: z.string().optional().or(z.date().optional()),
   notes: z.string().optional(),
   link: z.string().url().optional().or(z.literal("")),
+  status: z.enum(TournamentStatus).optional(),
   participants: z
     .array(z.object({ id: z.number(), name: z.string() }))
     .min(2, "At least 2 partecipants are required"),

@@ -1,6 +1,12 @@
 "use client";
 
-import { Archetype, Deck, Format, Tournament } from "@/generated/prisma";
+import {
+  Archetype,
+  Deck,
+  Format,
+  Tournament,
+  TournamentStatus,
+} from "@/generated/prisma";
 import {
   createTournament,
   updateTournament,
@@ -51,6 +57,7 @@ import {
   Selection,
   SelectItem,
   Tooltip,
+  User,
 } from "@heroui/react";
 import { capitalize, FullTable } from "@/components/fullTable";
 import { useRouter } from "next/navigation";
@@ -67,6 +74,7 @@ const columns: TableColumnDescriptor[] = [
   { name: "START DATE", uid: "startDate", sortable: true },
   { name: "END DATE", uid: "endDate", sortable: true },
   { name: "STATUS", uid: "status", sortable: false },
+  { name: "WINNER", uid: "winner", sortable: false },
   { name: "MATCHES", uid: "matchCount", sortable: true },
   { name: "PARTICIPANTS", uid: "participants", sortable: true },
   { name: "ACTIONS", uid: "actions", sortable: false },
@@ -78,6 +86,7 @@ const INITIAL_VISIBLE_COLUMNS = [
   "startDate",
   "endDate",
   "status",
+  "winner",
   "matchCount",
   "participants",
   "actions",
@@ -85,24 +94,18 @@ const INITIAL_VISIBLE_COLUMNS = [
 
 const statusOptions: StatusOptionDescriptor[] = [
   { name: "Upcoming", uid: "upcoming" },
-  { name: "Active", uid: "active" },
+  { name: "Ongoing", uid: "ongoing" },
   { name: "Completed", uid: "completed" },
 ];
 
 const statusColorMap: Record<string, ChipProps["color"]> = {
   upcoming: "primary",
-  active: "success",
+  ongoing: "success",
   completed: "default",
 };
 
 const getTournamentStatus = (tournament: TournamentWithRelations): string => {
-  const now = new Date();
-  const startDate = new Date(tournament.startDate);
-  const endDate = tournament.endDate ? new Date(tournament.endDate) : null;
-
-  if (now < startDate) return "upcoming";
-  if (endDate && now > endDate) return "completed";
-  return "active";
+  return tournament.status.toLowerCase();
 };
 
 const DeleteModal = ({
@@ -385,7 +388,9 @@ const UpsertModal = ({
                     <Select
                       label="Grand Final Type"
                       placeholder="Select grand final type"
-                      isDisabled={tournamentType === TournamentType.ROUND_ROBIN}
+                      isDisabled={
+                        tournamentType !== TournamentType.DOUBLE_ELIMINATION
+                      }
                       selectedKeys={[grandFinalType]}
                       onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                         setGrandFinalType(e.target.value as GrandFinalType)
@@ -628,6 +633,34 @@ export default function TournamentsPage() {
             <Chip color={statusColorMap[status]} size="sm" variant="flat">
               {status.charAt(0).toUpperCase() + status.slice(1)}
             </Chip>
+          );
+        case "winner":
+          const winnerDeckStat = tournament.deckStats.find(
+            (ds) => ds.position === 1
+          );
+          const winnerDeck = winnerDeckStat?.deck;
+          return tournament.status === TournamentStatus.COMPLETED &&
+            winnerDeck ? (
+            <div className="flex items-center gap-2">
+              <User
+                avatarProps={{
+                  radius: "lg",
+                  src: winnerDeck.avatar?.toString(),
+                  showFallback: true,
+                  className: "hidden md:block shrink-0",
+                }}
+                description={winnerDeck.archetype.name}
+                name={winnerDeck.name}
+                classNames={{ name: "text-bold text-small capitalize" }}
+              >
+                <div className="font-semibold">{winnerDeck.name}</div>
+                <div className="text-xs text-default-500">
+                  {winnerDeck.archetype.name}
+                </div>
+              </User>
+            </div>
+          ) : (
+            <span className="text-small text-default-400">-</span>
           );
         case "matchCount":
           return (
