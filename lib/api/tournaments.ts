@@ -1,5 +1,9 @@
-import axios from "axios";
-import { TournamentWithRelations } from "@/types";
+import axios, { AxiosResponse } from "axios";
+import {
+  GrandFinalType,
+  TournamentType,
+  TournamentWithRelations,
+} from "@/types";
 import { addToast } from "@heroui/toast";
 import { getAvatarUrl } from "./avatarCache";
 import { DeleteTournamentsSchema } from "../schemas/tournaments";
@@ -8,6 +12,16 @@ const basePath = "/api/tournaments";
 
 export async function getAllTournaments(): Promise<TournamentWithRelations[]> {
   const res = await axios.get(basePath);
+  for (const tournament of res.data as TournamentWithRelations[]) {
+    tournament.deckStats.map(async (deckStat) => {
+      if (deckStat.deck.avatar) {
+        const presignedUrl = await getAvatarUrl(deckStat.deck.avatar);
+        if (presignedUrl) {
+          deckStat.deck.avatar = presignedUrl;
+        }
+      }
+    });
+  }
   return res.data;
 }
 
@@ -38,7 +52,41 @@ export async function getTournamentById(
       }
     }
   });
-  return res.data;
+  await Promise.all(
+    tournament.stages.map(async (stage) => {
+      if (stage.fileKey) {
+        try {
+          stage.data = {
+            stages: [],
+            matches: [],
+            matchGames: [],
+            participants: [],
+          };
+          const response: AxiosResponse<{
+            stage: [];
+            match: [];
+            match_game: [];
+            participant: [];
+          }> = await axios.get(stage.fileKey);
+
+          // Map the response data correctly
+          stage.data.stages = response.data.stage || [];
+          stage.data.matches = response.data.match || [];
+          stage.data.matchGames = response.data.match_game || [];
+          stage.data.participants = response.data.participant || [];
+        } catch (error) {
+          console.error("Error parsing stage fileKey JSON:", error);
+          stage.data = {
+            stages: [],
+            matches: [],
+            matchGames: [],
+            participants: [],
+          };
+        }
+      }
+    })
+  );
+  return tournament;
 }
 
 export async function createTournament(tournament: {
@@ -48,7 +96,15 @@ export async function createTournament(tournament: {
   endDate?: string | Date;
   notes?: string;
   link?: string;
-  participants: Array<number>;
+  participants: Array<{ id: number; name: string }>;
+  bracket: {
+    type: TournamentType;
+    settings: {
+      grandFinal?: GrandFinalType;
+      groupCount?: number;
+      roundRobinMode?: string;
+    };
+  };
 }) {
   try {
     const res = await axios.post(basePath, tournament);
@@ -67,14 +123,15 @@ export async function createTournament(tournament: {
 }
 
 export async function updateTournament(tournament: {
-  id: string;
-  name: string;
-  formatId: number;
-  startDate: string | Date;
+  id?: string;
+  name?: string;
+  formatId?: number;
+  startDate?: string | Date;
   endDate?: string | Date;
   notes?: string;
   link?: string;
-  participants: Array<number>;
+  status?: string;
+  participants?: Array<{ id: number; name: string }>;
 }) {
   try {
     const { participants, ...data } = tournament;

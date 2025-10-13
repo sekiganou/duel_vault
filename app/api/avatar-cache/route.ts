@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withErrorHandler } from "@/lib/middlewares/withErrorHandler";
-import { db } from "@/db";
-import { getMinioClient, S3_BUCKET } from "@/s3";
+import { client } from "@/client";
+import { IMAGE_BUCKET } from "@/s3/buckets";
+import { getMinioClient } from "@/s3";
 
 export const GET = withErrorHandler(async () => {
   // Get all decks with avatars
-  const decks = await db.deck.findMany({
+  const decks = await client.deck.findMany({
     where: {
       avatar: {
         not: null,
@@ -17,7 +18,7 @@ export const GET = withErrorHandler(async () => {
   });
 
   const minio = getMinioClient();
-  const bucketExists = await minio.bucketExists(S3_BUCKET);
+  const bucketExists = await minio.bucketExists(IMAGE_BUCKET);
   const avatarUrlMap: Record<string, string> = {};
 
   if (bucketExists) {
@@ -25,7 +26,7 @@ export const GET = withErrorHandler(async () => {
       decks.map(async (deck) => {
         if (deck.avatar) {
           const presignedUrl = await minio.presignedGetObject(
-            S3_BUCKET,
+            IMAGE_BUCKET,
             deck.avatar,
             60 * 60 * 24 // 24 hours
           );
@@ -50,7 +51,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   }
 
   const minio = getMinioClient();
-  const bucketExists = await minio.bucketExists(S3_BUCKET);
+  const bucketExists = await minio.bucketExists(IMAGE_BUCKET);
 
   if (!bucketExists) {
     return NextResponse.json({ error: "S3 bucket not found" }, { status: 404 });
@@ -58,7 +59,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
   try {
     const presignedUrl = await minio.presignedGetObject(
-      S3_BUCKET,
+      IMAGE_BUCKET,
       avatarPath,
       60 * 60 * 24 // 24 hours
     );

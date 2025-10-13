@@ -1,4 +1,4 @@
-import { db } from "@/db";
+import { client } from "@/client";
 import {
   getStatDecrements,
   updateTournamentDeckStats,
@@ -6,7 +6,7 @@ import {
 import { withErrorHandler } from "@/lib/middlewares/withErrorHandler";
 import { NextRequest, NextResponse } from "next/server";
 
-const schema = db.match;
+const schema = client.match;
 
 export const GET = withErrorHandler(async (req: NextRequest) => {
   const url = new URL(req.url);
@@ -52,7 +52,7 @@ export const DELETE = withErrorHandler(async (req: NextRequest) => {
     return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
   }
 
-  await db.$transaction(async (tx) => {
+  await client.$transaction(async (tx) => {
     // Get match details before deletion to update deck stats
     const match = await tx.match.findUnique({
       where: { id },

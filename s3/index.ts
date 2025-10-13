@@ -1,7 +1,5 @@
 import * as Minio from "minio";
 
-export const S3_BUCKET = "duel-vault";
-
 let cachedMinioclient: Minio.Client | null = null;
 
 export const getMinioClient = () => {

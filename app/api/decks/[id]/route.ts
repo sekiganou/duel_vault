@@ -1,9 +1,9 @@
-import { db } from "@/db";
+import { client } from "@/client";
+import { sortByPosition } from "@/lib/extensions/tournamentStats";
 import { withErrorHandler } from "@/lib/middlewares/withErrorHandler";
-import { getMinioClient, S3_BUCKET } from "@/s3";
 import { NextRequest, NextResponse } from "next/server";
 
-const schema = db.deck;
+const schema = client.deck;
 
 export const GET = withErrorHandler(async (req: NextRequest) => {
   const url = new URL(req.url);

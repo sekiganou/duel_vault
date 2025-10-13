@@ -1,11 +1,12 @@
-import { db } from "@/db";
+import { client } from "@/client";
 import { withErrorHandler } from "@/lib/middlewares/withErrorHandler";
 import { DeleteDecksSchema, UpsertDeckSchema } from "@/lib/schemas/decks";
-import { getMinioClient, S3_BUCKET } from "@/s3";
+import { getMinioClient } from "@/s3";
+import { IMAGE_BUCKET } from "@/s3/buckets";
 import { NextRequest, NextResponse } from "next/server";
 import z from "zod";
 
-const schema = db.deck;
+const schema = client.deck;
 
 export const GET = withErrorHandler(async () => {
   const items = await schema.findMany({
@@ -62,7 +63,9 @@ export const DELETE = withErrorHandler(async (req: NextRequest) => {
   const minio = getMinioClient();
 
   await Promise.all(
-    avatars.map((a) => a.avatar ? minio.removeObject(S3_BUCKET, a.avatar) : Promise.resolve())
+    avatars.map((a) =>
+      a.avatar ? minio.removeObject(IMAGE_BUCKET, a.avatar) : Promise.resolve()
+    )
   );
 
   await schema.deleteMany({
