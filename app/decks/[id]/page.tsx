@@ -159,7 +159,7 @@ export default function ViewDeckPage() {
 
   const bestFinish = deck.tournamentStats
     .filter((stat) => stat.position !== null)
-    .sort((a, b) => (a.position! < b.position! ? -1 : 1))[0].position;
+    .sort((a, b) => (a.position! < b.position! ? -1 : 1))[0]?.position;
 
   const totalPodiums = deck.tournamentStats.filter(
     (stat) => stat.position !== null && stat.position <= 3
