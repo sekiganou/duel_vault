@@ -87,7 +87,7 @@ const INITIAL_VISIBLE_COLUMNS = [
   "endDate",
   "status",
   "winner",
-  "matchCount",
+  // "matchCount",
   "participants",
   "actions",
 ];
@@ -718,6 +718,8 @@ export default function TournamentsPage() {
     },
     [onOpenEditModal, onOpenDeleteModal, router]
   );
+
+  console.log("tournaments: ", tournaments);
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4">

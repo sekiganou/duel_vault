@@ -317,6 +317,8 @@ export function BracketViewer({
   const [opponent1Id, setOpponent1Id] = useState<number | null>(null);
   const [opponent2Id, setOpponent2Id] = useState<number | null>(null);
 
+  const [canCreateMatch, setCanCreateMatch] = useState(false);
+
   useEffect(() => {
     if (containerRef.current && window.bracketsViewer && stageData) {
       containerRef.current.innerHTML = "";
@@ -329,6 +331,14 @@ export function BracketViewer({
           setBracketMatchId(match.id);
           setOpponent1Id(match.opponent1.id);
           setOpponent2Id(match.opponent2.id);
+          setCanCreateMatch(
+            match.opponent1.id !== null &&
+              match.opponent2.id !== null &&
+              !(
+                match.opponent1.result !== undefined ||
+                match.opponent2.result !== undefined
+              )
+          );
           onOpenUpdateScoreModal();
         };
 
@@ -362,17 +372,17 @@ export function BracketViewer({
   return (
     <>
       <div ref={containerRef} className="brackets-viewer" />
-      {opponent1Id !== null && opponent2Id !== null && (
+      {canCreateMatch && (
         <UpdateScoreModal
           handleGetTournamentById={handleGetTournamentById}
           tournamentId={tournamentId}
           isOpen={isOpenUpdateScoreModal}
           onOpenChange={onOpenUpdateScoreModalChange}
           bracketMatchId={bracketMatchId}
-          opponent1Id={opponent1Id}
-          opponent2Id={opponent2Id}
-          deckA={participantMapId.get(opponent1Id)!}
-          deckB={participantMapId.get(opponent2Id)!}
+          opponent1Id={opponent1Id!}
+          opponent2Id={opponent2Id!}
+          deckA={participantMapId.get(opponent1Id!)!}
+          deckB={participantMapId.get(opponent2Id!)!}
         />
       )}
     </>
