@@ -1,8 +1,12 @@
-import { db } from "@/db";
+import { client } from "@/client";
 import { withErrorHandler } from "@/lib/middlewares/withErrorHandler";
 import { UpsertTournamentSchema } from "@/lib/schemas/tournaments";
+import { getMinioClient } from "@/s3";
+import { BRACKET_BUCKET } from "@/s3/buckets";
 import { NextRequest, NextResponse } from "next/server";
-import { da } from "zod/v4/locales/index.cjs";
+import "@/lib/extensions/array";
+import { sortByPosition } from "@/lib/extensions/tournamentStats";
+import { TournamentDeckStats, TournamentStatus } from "@/generated/prisma";
 
 export const GET = withErrorHandler(async (req: NextRequest) => {
   const url = new URL(req.url);
@@ -16,11 +20,12 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     );
   }
 
-  const tournament = await db.tournament.findUnique({
+  const tournament = await client.tournament.findUnique({
     where: {
       id: id,
     },
     include: {
+      stages: true,
       format: true,
       matches: {
         include: {
@@ -56,6 +61,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
             },
           },
         },
+        orderBy: [{ position: "asc" }, { wins: "desc" }, { losses: "asc" }],
       },
     },
   });
@@ -65,6 +71,24 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
       { error: "Tournament not found" },
       { status: 404 }
     );
+  }
+
+  for (const stage of tournament.stages) {
+    if (stage.fileKey) {
+      const minio = getMinioClient();
+      try {
+        stage.fileKey = await minio.presignedGetObject(
+          BRACKET_BUCKET,
+          stage.fileKey,
+          24 * 60 * 60 // 24 hours
+        );
+      } catch (error) {
+        console.error(
+          `Error generating presigned URL for ${stage.fileKey}:`,
+          error
+        );
+      }
+    }
   }
 
   return NextResponse.json(tournament);
@@ -78,6 +102,8 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const body = await req.json();
   const parsed = UpsertTournamentSchema.omit({
     id: true,
+    formatId: true,
+    bracket: true,
     participants: true,
   }).safeParse(body);
 
@@ -88,12 +114,32 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     );
   }
 
-  const updatedTournament = await db.tournament.update({
-    where: { id: id },
-    data: parsed.data,
-  });
+  if (parsed.data.status === TournamentStatus.COMPLETED) {
+    const orderedDeckStats: TournamentDeckStats[] = sortByPosition(
+      await client.tournamentDeckStats.findMany({
+        where: { tournamentId: id },
+      }),
+      await client.match.findMany({
+        where: { tournamentId: id },
+      })
+    );
 
-  return NextResponse.json(updatedTournament);
+    await client.$transaction(async (tx) => {
+      for (let i = 0; i < orderedDeckStats.length; i++) {
+        await tx.tournamentDeckStats.update({
+          where: { id: orderedDeckStats[i].id },
+          data: { position: i + 1 },
+        });
+      }
+
+      await tx.tournament.update({
+        where: { id: id },
+        data: parsed.data,
+      });
+    });
+  }
+
+  return NextResponse.json({ success: true, updatedId: id });
 });
 
 export const DELETE = withErrorHandler(async (req: NextRequest) => {
@@ -108,8 +154,29 @@ export const DELETE = withErrorHandler(async (req: NextRequest) => {
     );
   }
 
-  await db.tournament.delete({
-    where: { id: id },
+  await client.$transaction(async (tx) => {
+    const minio = getMinioClient();
+
+    await tx.tournamentStages
+      .findMany({
+        where: { tournamentId: id },
+      })
+      .then(async (stages) => {
+        for (const stage of stages) {
+          try {
+            await minio.removeObject(BRACKET_BUCKET, stage.fileKey);
+          } catch (error) {
+            console.error(
+              `Error deleting bracket file ${stage.fileKey}:`,
+              error
+            );
+          }
+        }
+      });
+
+    await tx.tournament.delete({
+      where: { id: id },
+    });
   });
 
   return NextResponse.json({ success: true, deletedId: id });

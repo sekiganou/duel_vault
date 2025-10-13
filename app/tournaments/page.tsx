@@ -1,6 +1,12 @@
 "use client";
 
-import { Archetype, Deck, Format, Tournament } from "@/generated/prisma";
+import {
+  Archetype,
+  Deck,
+  Format,
+  Tournament,
+  TournamentStatus,
+} from "@/generated/prisma";
 import {
   createTournament,
   updateTournament,
@@ -14,6 +20,9 @@ import {
   StatusOptionDescriptor,
   TableColumnDescriptor,
   DeckWithRelations,
+  TournamentType,
+  GrandFinalType,
+  RoundRobinMode,
 } from "@/types";
 
 import {
@@ -48,11 +57,15 @@ import {
   Selection,
   SelectItem,
   Tooltip,
+  User,
 } from "@heroui/react";
 import { capitalize, FullTable } from "@/components/fullTable";
 import { useRouter } from "next/navigation";
 import { getAllDecks } from "@/lib/api/decks";
 import { Avatar } from "@heroui/avatar";
+import { UpsertTournamentSchema } from "@/lib/schemas/tournaments";
+import z from "zod";
+import is from "zod/v4/locales/is.cjs";
 
 const columns: TableColumnDescriptor[] = [
   { name: "ID", uid: "id", sortable: true },
@@ -61,6 +74,7 @@ const columns: TableColumnDescriptor[] = [
   { name: "START DATE", uid: "startDate", sortable: true },
   { name: "END DATE", uid: "endDate", sortable: true },
   { name: "STATUS", uid: "status", sortable: false },
+  { name: "WINNER", uid: "winner", sortable: false },
   { name: "MATCHES", uid: "matchCount", sortable: true },
   { name: "PARTICIPANTS", uid: "participants", sortable: true },
   { name: "ACTIONS", uid: "actions", sortable: false },
@@ -72,31 +86,26 @@ const INITIAL_VISIBLE_COLUMNS = [
   "startDate",
   "endDate",
   "status",
-  "matchCount",
+  "winner",
+  // "matchCount",
   "participants",
   "actions",
 ];
 
 const statusOptions: StatusOptionDescriptor[] = [
   { name: "Upcoming", uid: "upcoming" },
-  { name: "Active", uid: "active" },
+  { name: "Ongoing", uid: "ongoing" },
   { name: "Completed", uid: "completed" },
 ];
 
 const statusColorMap: Record<string, ChipProps["color"]> = {
   upcoming: "primary",
-  active: "success",
+  ongoing: "success",
   completed: "default",
 };
 
 const getTournamentStatus = (tournament: TournamentWithRelations): string => {
-  const now = new Date();
-  const startDate = new Date(tournament.startDate);
-  const endDate = tournament.endDate ? new Date(tournament.endDate) : null;
-
-  if (now < startDate) return "upcoming";
-  if (endDate && now > endDate) return "completed";
-  return "active";
+  return tournament.status.toLowerCase();
 };
 
 const DeleteModal = ({
@@ -173,6 +182,20 @@ const UpsertModal = ({
   const [mappedDecksIdName, setMappedDecksIdName] = useState<
     Map<number, string>
   >(new Map());
+
+  const [tournamentType, setTournamentType] = useState<string>(
+    TournamentType.SINGLE_ELIMINATION
+  );
+
+  const [grandFinalType, setGrandFinalType] = useState<string>(
+    GrandFinalType.NONE
+  );
+  const [roundRobinMode, setRoundRobinMode] = useState<string>(
+    RoundRobinMode.SIMPLE
+  );
+
+  const [groupCount, setGroupCount] = useState<number>(1);
+
   const [tournamentName, setTournamentName] = useState("");
   const [tournamentFormatId, setTournamentFormatId] = useState("");
   const [tournamentStartDate, setTournamentStartDate] = useState("");
@@ -219,6 +242,10 @@ const UpsertModal = ({
         new Set(tournament.deckStats.map((ds) => ds.deckId.toString()))
       );
     } else {
+      setTournamentType(TournamentType.SINGLE_ELIMINATION);
+      setGrandFinalType(GrandFinalType.NONE);
+      setRoundRobinMode(RoundRobinMode.SIMPLE);
+      setGroupCount(1);
       setTournamentName("");
       setTournamentFormatId("");
       setTournamentStartDate(new Date().toISOString().slice(0, 16));
@@ -242,7 +269,18 @@ const UpsertModal = ({
       endDate: tournamentEndDate ? new Date(tournamentEndDate) : undefined,
       notes: tournamentNotes || undefined,
       link: tournamentLink || undefined,
-      participants: Array.from(tournamentParticipants).map((p) => Number(p)),
+      participants: Array.from(tournamentParticipants).map((p) => ({
+        id: Number(p),
+        name: mappedDecksIdName.get(Number(p))!,
+      })),
+      bracket: {
+        type: tournamentType as TournamentType,
+        settings: {
+          grandFinal: grandFinalType as GrandFinalType,
+          groupCount: groupCount,
+          roundRobinMode: roundRobinMode as RoundRobinMode,
+        },
+      },
     };
 
     const operation = isEdit
@@ -278,47 +316,124 @@ const UpsertModal = ({
               {isEdit ? tournament?.name : ""}
             </ModalHeader>
 
-            <ModalBody className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input
-                  placeholder="Tournament name"
-                  type="text"
-                  label="Name"
-                  isRequired
-                  isClearable
-                  value={tournamentName}
-                  onValueChange={(val) => {
-                    setTournamentName(val);
-                    if (val.trim()) setTournamentNameInputError("");
-                    else if (val === "")
-                      setTournamentNameInputError(
-                        "Please fill out this field."
-                      );
-                  }}
-                  onClear={() => {
-                    setTournamentName("");
+            <ModalBody className="space-y-2">
+              <Input
+                placeholder="Tournament name"
+                type="text"
+                label="Name"
+                isRequired
+                isClearable
+                value={tournamentName}
+                onValueChange={(val) => {
+                  setTournamentName(val);
+                  if (val.trim()) setTournamentNameInputError("");
+                  else if (val === "")
                     setTournamentNameInputError("Please fill out this field.");
-                  }}
-                  isInvalid={!!tournamentNameInputError}
-                  errorMessage={tournamentNameInputError}
-                />
+                }}
+                onClear={() => {
+                  setTournamentName("");
+                  setTournamentNameInputError("Please fill out this field.");
+                }}
+                isInvalid={!!tournamentNameInputError}
+                errorMessage={tournamentNameInputError}
+              />
+              {!isEdit && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Select
+                      label="Format"
+                      placeholder="Select format"
+                      selectedKeys={[tournamentFormatId]}
+                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                        setTournamentFormatId(e.target.value)
+                      }
+                      isRequired
+                    >
+                      {formats.map((format) => (
+                        <SelectItem key={format.id.toString()}>
+                          {format.name}
+                        </SelectItem>
+                      ))}
+                    </Select>
 
-                <Select
-                  label="Format"
-                  placeholder="Select format"
-                  selectedKeys={[tournamentFormatId]}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                    setTournamentFormatId(e.target.value)
-                  }
-                  isRequired
-                >
-                  {formats.map((format) => (
-                    <SelectItem key={format.id.toString()}>
-                      {format.name}
-                    </SelectItem>
-                  ))}
-                </Select>
+                    <Select
+                      label="Type"
+                      placeholder="Select type"
+                      selectedKeys={[tournamentType]}
+                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                        setTournamentType(e.target.value as TournamentType)
+                      }
+                      isRequired
+                      // description={
+                      //   tournamentType === TournamentType.SINGLE_ELIMINATION
+                      //     ? "Single elimination bracket - lose once and you're out"
+                      //     : tournamentType === TournamentType.DOUBLE_ELIMINATION
+                      //       ? "Double elimination bracket - winners and losers brackets"
+                      //       : "Round robin - everyone plays everyone"
+                      // }
+                    >
+                      <SelectItem key={TournamentType.SINGLE_ELIMINATION}>
+                        Single Elimination
+                      </SelectItem>
+                      <SelectItem key={TournamentType.DOUBLE_ELIMINATION}>
+                        Double Elimination
+                      </SelectItem>
+                      <SelectItem key={TournamentType.ROUND_ROBIN}>
+                        Round Robin
+                      </SelectItem>
+                    </Select>
+                  </div>
 
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Select
+                      label="Grand Final Type"
+                      placeholder="Select grand final type"
+                      isDisabled={
+                        tournamentType !== TournamentType.DOUBLE_ELIMINATION
+                      }
+                      selectedKeys={[grandFinalType]}
+                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                        setGrandFinalType(e.target.value as GrandFinalType)
+                      }
+                    >
+                      <SelectItem key={GrandFinalType.NONE}>None</SelectItem>
+                      <SelectItem key={GrandFinalType.SIMPLE}>
+                        Simple
+                      </SelectItem>
+                      <SelectItem key={GrandFinalType.DOUBLE}>
+                        Double
+                      </SelectItem>
+                    </Select>
+                    <Select
+                      label="Round Robin Mode"
+                      placeholder="Select round robin mode"
+                      isDisabled={tournamentType !== TournamentType.ROUND_ROBIN}
+                      selectedKeys={[roundRobinMode]}
+                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                        setRoundRobinMode(e.target.value as RoundRobinMode)
+                      }
+                    >
+                      <SelectItem key={RoundRobinMode.SIMPLE}>
+                        Simple
+                      </SelectItem>
+                      <SelectItem key={RoundRobinMode.DOUBLE}>
+                        Double
+                      </SelectItem>
+                    </Select>
+                    <Input
+                      label="Group Count"
+                      placeholder="Select number of groups"
+                      type="number"
+                      min={1}
+                      value={groupCount.toString()}
+                      onChange={(e) => setGroupCount(Number(e.target.value))}
+                      className="w-full"
+                      isDisabled={tournamentType !== TournamentType.ROUND_ROBIN}
+                    />
+                  </div>
+                </>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
                   type="datetime-local"
                   label="Start Date"
@@ -326,23 +441,13 @@ const UpsertModal = ({
                   value={tournamentStartDate}
                   onChange={(e) => setTournamentStartDate(e.target.value)}
                 />
-
                 <Input
                   type="datetime-local"
                   label="End Date (Optional)"
                   value={tournamentEndDate}
                   onChange={(e) => setTournamentEndDate(e.target.value)}
                 />
-
-                <Input
-                  type="url"
-                  label="Link (Optional)"
-                  placeholder="https://..."
-                  value={tournamentLink}
-                  onChange={(e) => setTournamentLink(e.target.value)}
-                />
               </div>
-
               <Select
                 label="Participants"
                 placeholder="Select all the participants"
@@ -407,7 +512,6 @@ const UpsertModal = ({
                   </SelectItem>
                 ))}
               </Select>
-
               <Input
                 label="Notes (Optional)"
                 placeholder="Add tournament notes or description"
@@ -530,6 +634,34 @@ export default function TournamentsPage() {
               {status.charAt(0).toUpperCase() + status.slice(1)}
             </Chip>
           );
+        case "winner":
+          const winnerDeckStat = tournament.deckStats.find(
+            (ds) => ds.position === 1
+          );
+          const winnerDeck = winnerDeckStat?.deck;
+          return tournament.status === TournamentStatus.COMPLETED &&
+            winnerDeck ? (
+            <div className="flex items-center gap-2">
+              <User
+                avatarProps={{
+                  radius: "lg",
+                  src: winnerDeck.avatar?.toString(),
+                  showFallback: true,
+                  className: "hidden md:block shrink-0",
+                }}
+                description={winnerDeck.archetype.name}
+                name={winnerDeck.name}
+                classNames={{ name: "text-bold text-small capitalize" }}
+              >
+                <div className="font-semibold">{winnerDeck.name}</div>
+                <div className="text-xs text-default-500">
+                  {winnerDeck.archetype.name}
+                </div>
+              </User>
+            </div>
+          ) : (
+            <span className="text-small text-default-400">-</span>
+          );
         case "matchCount":
           return (
             <span className="text-small">{tournament.matches.length}</span>
@@ -586,6 +718,8 @@ export default function TournamentsPage() {
     },
     [onOpenEditModal, onOpenDeleteModal, router]
   );
+
+  console.log("tournaments: ", tournaments);
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4">

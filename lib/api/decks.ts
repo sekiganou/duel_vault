@@ -5,12 +5,11 @@ import {
   UpsertDeckSchema,
 } from "../schemas/decks";
 import { DeckWithRelations } from "@/types";
-import { getMinioClient, S3_BUCKET } from "@/s3";
 import { addToast } from "@heroui/toast";
 import { deleteFile, uploadFile } from "./minio";
 import { ChipProps } from "@heroui/chip";
-import { Button } from "@heroui/button";
 import { getAvatarUrl } from "./avatarCache";
+import { IMAGE_BUCKET } from "@/s3/buckets";
 
 const basePath = "/api/decks";
 
@@ -88,10 +87,10 @@ export async function upsertDeck(
     const isAvatarToDelete =
       currentAvatar !== null && avatarFile === null && nextAvatar === null;
 
-    if (isAvatarToDelete) await deleteFile(currentAvatar);
+    if (isAvatarToDelete) await deleteFile(IMAGE_BUCKET, currentAvatar);
 
     const avatarName = avatarFile
-      ? await uploadFile(avatarFile)
+      ? await uploadFile(IMAGE_BUCKET, avatarFile)
       : isAvatarToDelete
         ? null
         : nextAvatar;
@@ -122,7 +121,7 @@ export async function upsertDeck(
 export async function deleteDeck(id: number, avatar: string | null) {
   try {
     await axios.delete(`${basePath}/${id}`).then(() => {
-      if (avatar) deleteFile(avatar);
+      if (avatar) deleteFile(IMAGE_BUCKET, avatar);
     });
 
     addToast({

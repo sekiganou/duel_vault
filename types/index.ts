@@ -5,6 +5,7 @@ import {
   Match,
   Tournament,
   TournamentDeckStats,
+  TournamentStages,
 } from "@/generated/prisma";
 import { SVGProps } from "react";
 
@@ -78,6 +79,30 @@ export type StatusOptionDescriptor = {
   uid: string;
 };
 
+export enum GrandFinalType {
+  NONE = "none",
+  SIMPLE = "simple",
+  DOUBLE = "double",
+}
+
+export enum RoundRobinMode {
+  SIMPLE = "simple",
+  DOUBLE = "double",
+}
+
+export enum TournamentType {
+  SINGLE_ELIMINATION = "single_elimination",
+  DOUBLE_ELIMINATION = "double_elimination",
+  ROUND_ROBIN = "round_robin",
+}
+
+export type StageData = {
+  stages: any[];
+  matches: any[];
+  matchGames: any[];
+  participants: any[];
+};
+
 export type TournamentWithRelations = Tournament & {
   format: Format;
   matches: (Match & {
@@ -87,6 +112,9 @@ export type TournamentWithRelations = Tournament & {
   })[];
   deckStats: (TournamentDeckStats & {
     deck: DeckWithRelations;
+  })[];
+  stages: (TournamentStages & {
+    data: StageData;
   })[];
 };
 

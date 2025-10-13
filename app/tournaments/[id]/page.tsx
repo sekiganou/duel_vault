@@ -1,11 +1,42 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { getTournamentById } from "@/lib/api/tournaments";
-import { CardTabItem, TournamentWithRelations } from "@/types";
+
+// Declare window.bracketsViewer for TypeScript
+declare global {
+  interface Window {
+    bracketsViewer?: {
+      setParticipantImages: (
+        participants: { participantId: number; imageUrl: string }[]
+      ) => void;
+      onMatchClicked: (match: any) => void;
+      render: (
+        data: {
+          stages: any[];
+          matches: any[];
+          matchGames: any[];
+          participants: any[];
+        },
+        options?: {
+          selector?: string;
+          [key: string]: any;
+        }
+      ) => string | void;
+    };
+  }
+}
+import { Image } from "@heroui/react";
+import { useEffect, useRef, useState } from "react";
+import { getTournamentById, updateTournament } from "@/lib/api/tournaments";
+import {
+  CardTabItem,
+  DeckWithRelations,
+  GrandFinalType,
+  TournamentType,
+  TournamentWithRelations,
+} from "@/types";
 import { Card, CardBody, CardHeader } from "@heroui/card";
-import { Chip } from "@heroui/chip";
+import { Chip, ChipProps } from "@heroui/chip";
 import { Spinner } from "@heroui/spinner";
 import { Divider } from "@heroui/divider";
 import {
@@ -17,6 +48,9 @@ import {
   IconSwords,
   IconGraph,
   IconEye,
+  IconLock,
+  IconCheck,
+  IconUser,
 } from "@tabler/icons-react";
 import { Button } from "@heroui/button";
 import { capitalize } from "@/components/fullTable";
@@ -31,22 +65,29 @@ import {
 import { User } from "@heroui/user";
 import "@/lib/extensions/array";
 import { CardTabs } from "@/components/cardTabs";
+import { Deck, TournamentStatus } from "@/generated/prisma";
+import {
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  useDisclosure,
+} from "@heroui/modal";
+import { Input } from "@heroui/input";
+import { Avatar } from "@heroui/avatar";
+import { upsertMatch } from "@/lib/api/matches";
+import { BracketViewer } from "./BracketViewer";
+import { Progress } from "@heroui/progress";
+import { Tooltip } from "@heroui/tooltip";
 
-const getTournamentStatus = (tournament: TournamentWithRelations): string => {
-  const now = new Date();
-  const startDate = new Date(tournament.startDate);
-  const endDate = tournament.endDate ? new Date(tournament.endDate) : null;
-
-  if (now < startDate) return "upcoming";
-  if (endDate && now > endDate) return "completed";
-  return "active";
+const statusColorMap: Record<string, ChipProps["color"]> = {
+  UPCOMING: "primary",
+  ONGOING: "success",
+  COMPLETED: "default",
 };
 
-const statusColorMap: Record<string, "primary" | "success" | "default"> = {
-  upcoming: "primary",
-  active: "success",
-  completed: "default",
-};
+const participantMapName = new Map<string, DeckWithRelations>();
 
 export default function ViewTournamentPage() {
   const { id } = useParams();
@@ -54,18 +95,37 @@ export default function ViewTournamentPage() {
   const [tournament, setTournament] = useState<TournamentWithRelations | null>(
     null
   );
-  const [loading, setLoading] = useState(true);
+
+  const {
+    isOpen: isOpenCompleteModal,
+    onOpen: onOpenCompleteModal,
+    onOpenChange: onOpenCompleteModalChange,
+  } = useDisclosure();
+
+  const [loadingTournament, setLoadingTournament] = useState(true);
+  const [loadingComplete, setLoadingComplete] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    setLoading(true);
-    setError(null);
+  const handleGetTournamentById = () => {
     getTournamentById(Number(id))
-      .then(setTournament)
+      .then((tournament) => {
+        setTournament(tournament);
+        participantMapName.clear();
+        tournament.deckStats.forEach((deckStat) => {
+          participantMapName.set(deckStat.deck.name, deckStat.deck);
+        });
+      })
       .catch((err) => {
         setError(err.message || "Failed to load tournament");
       })
-      .finally(() => setLoading(false));
+      .finally(() => setLoadingTournament(false));
+  };
+
+  useEffect(() => {
+    setLoadingTournament(true);
+    setError(null);
+    handleGetTournamentById();
   }, [id]);
 
   useEffect(() => {
@@ -80,9 +140,9 @@ export default function ViewTournamentPage() {
         });
       }
     }
-  }, [tournament]);
+  }, [id]);
 
-  if (loading) {
+  if (loadingTournament) {
     return (
       <div className="flex justify-center items-center min-h-[200px]">
         <Spinner size="lg" />
@@ -139,8 +199,14 @@ export default function ViewTournamentPage() {
     );
   }
 
-  const status = getTournamentStatus(tournament);
-  const totalMatches = tournament.matches.length;
+  const status = tournament.status;
+  const totalMatches =
+    tournament.stages[0].data.matches.length -
+    (tournament.stages[0].data.stages[0].settings.grandFinal ===
+    GrandFinalType.DOUBLE
+      ? 1
+      : 0);
+  const matchesPlayed = tournament.matches.length;
 
   // Calculate tournament duration
   const startDate = new Date(tournament.startDate);
@@ -148,22 +214,24 @@ export default function ViewTournamentPage() {
   const now = new Date();
 
   let durationText = "";
-  if (status === "upcoming") {
+  if (status === TournamentStatus.UPCOMING) {
     const daysUntilStart = Math.ceil(
       (startDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
     );
     durationText = `Starts in ${daysUntilStart} day${daysUntilStart !== 1 ? "s" : ""}`;
-  } else if (status === "active") {
+  } else if (status === TournamentStatus.ONGOING) {
     const daysSinceStart = Math.ceil(
       (now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
     );
     durationText = `Running for ${daysSinceStart} day${daysSinceStart !== 1 ? "s" : ""}`;
-  } else if (endDate) {
+  } else if (status === TournamentStatus.COMPLETED && endDate) {
     const duration = Math.ceil(
       (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
     );
     durationText = `Duration: ${duration} day${duration !== 1 ? "s" : ""}`;
   }
+
+  const canComplete = matchesPlayed >= totalMatches;
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -183,6 +251,25 @@ export default function ViewTournamentPage() {
             </span>
           </div>
         </div>
+        {status !== TournamentStatus.COMPLETED && (
+          <Tooltip
+            content={
+              canComplete
+                ? "Complete Tournament"
+                : "Complete option will be available once all matches are played"
+            }
+          >
+            <Button
+              variant="solid"
+              color={canComplete ? "primary" : "default"}
+              onPress={() => onOpenCompleteModal()}
+              startContent={canComplete ? <IconCheck /> : <IconLock />}
+              disabled={!canComplete}
+            >
+              Complete
+            </Button>
+          </Tooltip>
+        )}
       </div>
 
       {/* Tournament Overview */}
@@ -211,11 +298,19 @@ export default function ViewTournamentPage() {
                 </div>
               </div>
 
-              {endDate && (
-                <div className="flex items-center gap-3">
-                  <IconCalendar size={20} className="text-default-400" />
-                  <div>
-                    <p className="text-small text-default-500">End Date</p>
+              <div className="flex items-center gap-3">
+                <IconSwords size={20} className="text-default-400" />
+                <div>
+                  <p className="text-small text-default-500">Total Matches</p>
+                  <p className="text-small font-medium">{totalMatches}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <IconCalendar size={20} className="text-default-400" />
+                <div>
+                  <p className="text-small text-default-500">End Date</p>
+                  {endDate ? (
                     <p className="text-small font-medium">
                       {endDate.toLocaleDateString()} at{" "}
                       {endDate.toLocaleTimeString([], {
@@ -223,15 +318,19 @@ export default function ViewTournamentPage() {
                         minute: "2-digit",
                       })}
                     </p>
-                  </div>
+                  ) : (
+                    <p className="text-small font-medium">N/A</p>
+                  )}
                 </div>
-              )}
+              </div>
 
               <div className="flex items-center gap-3">
-                <IconSwords size={20} className="text-default-400" />
+                <IconUser size={20} className="text-default-400" />
                 <div>
-                  <p className="text-small text-default-500">Total Matches</p>
-                  <p className="text-small font-medium">{totalMatches}</p>
+                  <p className="text-small text-default-500">Participants</p>
+                  <p className="text-small font-medium">
+                    {tournament.deckStats.length}
+                  </p>
                 </div>
               </div>
 
@@ -244,6 +343,16 @@ export default function ViewTournamentPage() {
                   </div>
                 </div>
               )}
+
+              <div className="flex items-center gap-3">
+                <IconGraph size={20} className="text-default-400" />
+                <div>
+                  <p className="text-small text-default-500">Format</p>
+                  <p className="text-small font-medium">
+                    {tournament.format.name}
+                  </p>
+                </div>
+              </div>
             </div>
 
             {tournament.link && (
@@ -279,32 +388,181 @@ export default function ViewTournamentPage() {
           </CardHeader>
           <CardBody className="space-y-3">
             <div className="flex justify-between">
-              <span className="text-small text-default-500">Participants</span>
-              <span className="text-small font-medium">
-                {tournament.deckStats.length}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-small text-default-500">
-                Matches Played
-              </span>
-              <span className="text-small font-medium">{totalMatches}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-small text-default-500">Format</span>
-              <span className="text-small font-medium">
-                {tournament.format.name}
-              </span>
-            </div>
-            <div className="flex justify-between">
               <span className="text-small text-default-500">Status</span>
               <Chip color={statusColorMap[status]} size="sm" variant="flat">
                 {capitalize(status)}
               </Chip>
             </div>
+
+            <div className="flex justify-between items-center">
+              <p className="text-small text-default-500">Progress</p>
+              <div className="flex items-center gap-2">
+                <Progress
+                  value={(matchesPlayed / totalMatches) * 100}
+                  className="w-32"
+                  size="sm"
+                />
+                <span className="text-small font-medium">
+                  {matchesPlayed}/{totalMatches} Matches
+                </span>
+              </div>
+            </div>
           </CardBody>
         </Card>
       </div>
+
+      <Modal
+        isOpen={isOpenCompleteModal}
+        onOpenChange={onOpenCompleteModalChange}
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader>Complete Tournament</ModalHeader>
+              <ModalBody>
+                <p className="mb-4">
+                  Are you sure you want to mark this tournament as completed?
+                  This action cannot be undone.
+                </p>
+              </ModalBody>
+              <ModalFooter className="space-x-2">
+                <Button variant="light" onPress={onClose}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="solid"
+                  color="primary"
+                  isLoading={loadingComplete}
+                  onPress={async () => {
+                    setLoadingComplete(true);
+                    await updateTournament({
+                      id: tournament.id.toString(),
+                      name: tournament.name,
+                      startDate: new Date(tournament.startDate).toISOString(),
+                      endDate: new Date().toISOString(),
+                      status: TournamentStatus.COMPLETED,
+                    });
+                    onClose();
+                    handleGetTournamentById();
+                    setLoadingComplete(false);
+                  }}
+                >
+                  Confirm
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
+      {status === TournamentStatus.COMPLETED && (
+        <>
+          <Divider className="my-8" />
+
+          <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
+            <IconTrophy className="text-primary" size={28} />
+            Final Results
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            {tournament.deckStats.slice(0, 3).map((deckStat, index) => {
+              const position = index + 1;
+              const totalGames =
+                deckStat.wins + deckStat.losses + deckStat.ties;
+              const winRate =
+                totalGames > 0
+                  ? ((deckStat.wins / totalGames) * 100).toFixed(1)
+                  : "0";
+
+              // Podium colors and styling
+              const podiumConfig = {
+                1: {
+                  emoji: "🥇",
+                  title: "1st Place",
+                  chipColor: "warning" as ChipProps["color"], // Gold
+                  cardBorder: "border-yellow-500",
+                  headerBg:
+                    "bg-gradient-to-r from-yellow-100 to-amber-100 dark:from-yellow-900/20 dark:to-amber-900/20",
+                },
+                2: {
+                  emoji: "🥈",
+                  title: "2nd Place",
+                  chipColor: "default" as ChipProps["color"], // Silver
+                  cardBorder: "border-gray-400",
+                  headerBg:
+                    "bg-gradient-to-r from-gray-100 to-slate-100 dark:from-gray-900/20 dark:to-slate-900/20",
+                },
+                3: {
+                  emoji: "🥉",
+                  title: "3rd Place",
+                  chipColor: "secondary" as ChipProps["color"], // Bronze
+                  cardBorder: "border-orange-600",
+                  headerBg:
+                    "bg-gradient-to-r from-orange-100 to-amber-100 dark:from-orange-900/20 dark:to-amber-900/20",
+                },
+              }[position];
+
+              return (
+                <Card
+                  key={deckStat.id}
+                  className={`${podiumConfig?.cardBorder} border-2`}
+                >
+                  <CardHeader
+                    className={`${podiumConfig?.headerBg} rounded-t-lg`}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">{podiumConfig?.emoji}</span>
+                        <div>
+                          <p className="text-lg font-bold">
+                            {podiumConfig?.title}
+                          </p>
+                          <Chip
+                            color={podiumConfig?.chipColor}
+                            size="sm"
+                            variant="flat"
+                            className="font-semibold"
+                          >
+                            {deckStat.wins}W - {deckStat.losses}L -{" "}
+                            {deckStat.ties}T
+                          </Chip>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-small text-default-500">Win Rate</p>
+                        <p className="text-lg font-bold">{winRate}%</p>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardBody className="text-center space-y-4">
+                    <div className="flex justify-center w-full">
+                      <Button
+                        className="h-full p-4"
+                        variant="light"
+                        onPress={() => router.push(`/decks/${deckStat.deckId}`)}
+                      >
+                        <Avatar
+                          src={deckStat.deck.avatar || undefined}
+                          className="w-32 h-32 text-large"
+                          radius="lg"
+                        />
+                      </Button>
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold mb-1">
+                        {deckStat.deck.name}
+                      </h3>
+                      <p className="text-default-500 mb-2">
+                        {deckStat.deck.archetype.name}
+                      </p>
+                    </div>
+                  </CardBody>
+                </Card>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       <Divider className="my-8" />
 
@@ -332,130 +590,82 @@ export default function ViewTournamentPage() {
                   <TableColumn>ACTION</TableColumn>
                 </TableHeader>
                 <TableBody>
-                  {tournament.deckStats
-                    .sortByWinsAndLosses(
-                      (deckStat) => deckStat.wins,
-                      (deckStat) => deckStat.losses
-                    )
-                    .sort((a, b) => {
-                      // If wins and losses are the same, use last match date as tiebreaker
-                      if (a.wins === b.wins && a.losses === b.losses) {
-                        // Find each deck's last match (their elimination match or final match)
-                        const aDeckMatches = tournament.matches
-                          .filter(
-                            (match) =>
-                              match.deckA.id === a.deckId ||
-                              match.deckB.id === a.deckId
-                          )
-                          .sort(
-                            (m1, m2) =>
-                              new Date(m2.date).getTime() -
-                              new Date(m1.date).getTime()
-                          );
+                  {tournament.deckStats.map((deckStat, index) => {
+                    const totalGames =
+                      deckStat.wins + deckStat.losses + deckStat.ties;
+                    const winRate =
+                      totalGames > 0
+                        ? ((deckStat.wins / totalGames) * 100).toFixed(1)
+                        : "0";
+                    const finalRank = index + 1;
 
-                        const bDeckMatches = tournament.matches
-                          .filter(
-                            (match) =>
-                              match.deckA.id === b.deckId ||
-                              match.deckB.id === b.deckId
-                          )
-                          .sort(
-                            (m1, m2) =>
-                              new Date(m2.date).getTime() -
-                              new Date(m1.date).getTime()
-                          );
-
-                        // Deck with later final match gets better placement (lower index)
-                        const aLastMatch = aDeckMatches[0]?.date;
-                        const bLastMatch = bDeckMatches[0]?.date;
-
-                        if (aLastMatch && bLastMatch) {
-                          return (
-                            new Date(bLastMatch).getTime() -
-                            new Date(aLastMatch).getTime()
-                          );
-                        }
-                      }
-                      return 0; // No change if not tied or no match data
-                    })
-                    .map((deckStat, index) => {
-                      const totalGames =
-                        deckStat.wins + deckStat.losses + deckStat.ties;
-                      const winRate =
-                        totalGames > 0
-                          ? ((deckStat.wins / totalGames) * 100).toFixed(1)
-                          : "0";
-                      const finalRank = index + 1;
-
-                      return (
-                        <TableRow key={deckStat.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              {finalRank === 1 && (
-                                <span className="text-yellow-500">🥇</span>
-                              )}
-                              {finalRank === 2 && (
-                                <span className="text-gray-400">🥈</span>
-                              )}
-                              {finalRank === 3 && (
-                                <span className="text-orange-600">🥉</span>
-                              )}
-                              {finalRank > 3 && (
-                                <span className="text-default-400">🔹</span>
-                              )}
-                              <span className="font-semibold">
-                                #{finalRank}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <User
-                              name={deckStat.deck.name}
-                              // description={deckStat.deck.format.name}
-                              avatarProps={{
-                                src: deckStat.deck.avatar || undefined,
-                                size: "sm",
-                                radius: "lg",
-                              }}
-                              // className="text-default-400"
-                            />
-                          </TableCell>
-                          <TableCell className="text-default-400">
-                            {deckStat.deck.archetype.name}
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-success font-semibold">
-                              {deckStat.wins}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-danger font-semibold">
-                              {deckStat.losses}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-warning font-semibold">
-                              {deckStat.ties}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <span className="font-semibold">{winRate}%</span>
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              variant="light"
-                              size="sm"
-                              onPress={() =>
-                                router.push(`/decks/${deckStat.deckId}`)
-                              }
-                              aria-label={`View deck ${deckStat.deck.name}`}
-                            >
-                              View
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
+                    return (
+                      <TableRow key={deckStat.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {finalRank === 1 && (
+                              <span className="text-yellow-500">🥇</span>
+                            )}
+                            {finalRank === 2 && (
+                              <span className="text-gray-400">🥈</span>
+                            )}
+                            {finalRank === 3 && (
+                              <span className="text-orange-600">🥉</span>
+                            )}
+                            {finalRank > 3 && (
+                              <span className="text-default-400">🔹</span>
+                            )}
+                            <span className="font-semibold">#{finalRank}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <User
+                            name={deckStat.deck.name}
+                            // description={deckStat.deck.format.name}
+                            avatarProps={{
+                              src: deckStat.deck.avatar || undefined,
+                              size: "sm",
+                              radius: "lg",
+                            }}
+                            // className="text-default-400"
+                          />
+                        </TableCell>
+                        <TableCell className="text-default-400">
+                          {deckStat.deck.archetype.name}
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-success font-semibold">
+                            {deckStat.wins}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-danger font-semibold">
+                            {deckStat.losses}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-warning font-semibold">
+                            {deckStat.ties}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-semibold">{winRate}%</span>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="light"
+                            size="sm"
+                            onPress={() =>
+                              router.push(`/decks/${deckStat.deckId}`)
+                            }
+                            aria-label={`View deck ${deckStat.deck.name}`}
+                          >
+                            View
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             ),
@@ -554,6 +764,41 @@ export default function ViewTournamentPage() {
                 </TableBody>
               </Table>
             ),
+          },
+          {
+            title: "Bracket",
+            key: "bracket",
+            emptyContent: {
+              header: "No Bracket Available",
+              text: "This tournament has no bracket yet.",
+              icon: (props) => <IconEye {...props} />,
+              displayEmptyContent:
+                !tournament.stages || tournament.stages.length === 0,
+            },
+            cardBody:
+              tournament.stages && tournament.stages.length > 0 ? (
+                <div>
+                  {tournament.stages.map((stage, index) => {
+                    if (!stage.fileKey) return null;
+
+                    return (
+                      <div key={index}>
+                        <BracketViewer
+                          handleGetTournamentById={handleGetTournamentById}
+                          tournamentId={tournament.id}
+                          participantMapName={participantMapName}
+                          stageData={stage.data}
+                          stageId={stage.id}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-small text-default-500">
+                  No bracket data available for this tournament.
+                </p>
+              ),
           },
         ]}
       />

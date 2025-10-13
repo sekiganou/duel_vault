@@ -10,6 +10,8 @@ import { Avatar } from "@heroui/avatar";
 import { Spinner } from "@heroui/spinner";
 import { Divider } from "@heroui/divider";
 import { Image } from "@heroui/image";
+import { Modal, ModalContent, ModalHeader, ModalBody } from "@heroui/modal";
+import { useDisclosure } from "@heroui/modal";
 import {
   IconCards,
   IconChevronLeft,
@@ -39,6 +41,7 @@ export default function ViewDeckPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { isOpen, onOpen, onOpenChange } = useDisclosure();
 
   useEffect(() => {
     setLoading(true);
@@ -154,6 +157,14 @@ export default function ViewDeckPage() {
     }
   });
 
+  const bestFinish = deck.tournamentStats
+    .filter((stat) => stat.position !== null)
+    .sort((a, b) => (a.position! < b.position! ? -1 : 1))[0].position;
+
+  const totalPodiums = deck.tournamentStats.filter(
+    (stat) => stat.position !== null && stat.position <= 3
+  ).length;
+
   return (
     <div
       className="container mx-auto px-4 py-8 max-w-4xl"
@@ -172,82 +183,94 @@ export default function ViewDeckPage() {
       </div>
       {/* Deck Overview */}
       <Card className="mb-6">
-        <CardHeader className="pb-0">
-          <div className="flex items-center gap-4 w-full">
+        <CardHeader className="pb-4">
+          <div className="flex items-start gap-6 w-full">
             {deck.avatar && (
-              <Image
-                src={deck.avatar}
-                alt={`${deck.name} avatar`}
-                radius="lg"
-                className="w-20 h-20 text-large"
-                // className="w-24 h-24 object-cover rounded-lg"
-              />
-            )}
-            <div className="flex-1">
-              <h2 className="text-2xl font-bold">{deck.name}</h2>
-              <div className="flex gap-2 mt-2 flex-col md:flex-row">
-                <Chip color="primary" variant="flat">
-                  {deck.format.name}
-                </Chip>
-                <Chip color="secondary" variant="flat">
-                  {deck.archetype.name}
-                </Chip>
-                <Chip
-                  color={statusColorMap[getDeckStatus(deck)]}
-                  variant="flat"
+              <div className="flex-shrink-0">
+                <Button
+                  className="w-full h-full p-0"
+                  variant="light"
+                  onPress={onOpen}
                 >
-                  {capitalize(getDeckStatus(deck))}
-                </Chip>
+                  <Image
+                    isZoomed
+                    src={deck.avatar}
+                    alt={`${deck.name} avatar`}
+                    radius="lg"
+                    className="w-24 h-24"
+                  />
+                </Button>
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1">
+                  <h2 className="text-3xl font-bold mb-2">{deck.name}</h2>
+                  <div className="flex gap-2 flex-wrap">
+                    <Chip color="primary" variant="flat" size="md">
+                      {deck.format.name}
+                    </Chip>
+                    <Chip color="secondary" variant="flat" size="md">
+                      {deck.archetype.name}
+                    </Chip>
+                    <Chip
+                      color={statusColorMap[getDeckStatus(deck)]}
+                      variant="flat"
+                      size="md"
+                    >
+                      {capitalize(getDeckStatus(deck))}
+                    </Chip>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-primary">
+                  <IconCards size={24} />
+                </div>
+              </div>
+
+              {/* Deck Information Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-default-500">Created:</span>
+                    <span className="font-semibold text-sm">
+                      {new Date(deck.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  {deck.updatedAt && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-default-500">
+                        Last Updated:
+                      </span>
+                      <span className="font-semibold text-sm">
+                        {new Date(deck.updatedAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </CardHeader>
-        <CardBody>
-          <Divider className="my-4" />
-          <h3 className="text-lg font-semibold mb-2">Description</h3>
-          {deck.description ? (
-            <p className="text-default-600">{deck.description}</p>
-          ) : (
-            <p className="text-default-600 italic">No description available</p>
-          )}
+        <CardBody className="pt-0">
+          <Divider className="mb-4" />
+          <div>
+            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              Description
+            </h3>
+            {deck.description ? (
+              <p className="text-default-600 leading-relaxed">
+                {deck.description}
+              </p>
+            ) : (
+              <p className="text-default-400 italic">
+                No description available
+              </p>
+            )}
+          </div>
         </CardBody>
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Deck Information */}
-        <Card>
-          <CardHeader className="flex items-center gap-2">
-            <IconCards className="text-primary" />
-            <h2 className="text-xl font-semibold">Deck Information</h2>
-          </CardHeader>
-          <CardBody>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span>Format:</span>
-                <span className="font-semibold">{deck.format.name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Archetype:</span>
-                <span className="font-semibold">{deck.archetype.name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Created:</span>
-                <span className="font-semibold">
-                  {new Date(deck.createdAt).toLocaleDateString()}
-                </span>
-              </div>
-              {deck.updatedAt && (
-                <div className="flex justify-between">
-                  <span>Last Updated:</span>
-                  <span className="font-semibold">
-                    {new Date(deck.updatedAt).toLocaleDateString()}
-                  </span>
-                </div>
-              )}
-            </div>
-          </CardBody>
-        </Card>
-
         {/* Match Statistics */}
         <Card>
           <CardHeader className="flex items-center gap-2">
@@ -278,6 +301,45 @@ export default function ViewDeckPage() {
                 <span className="font-semibold">{totalMatches}</span>
               </div>
             </div>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex items-center gap-2">
+            <IconTrophy className="text-primary" />
+            <h2 className="text-xl font-semibold">Tournament Statistics</h2>
+          </CardHeader>
+          <CardBody>
+            {deck.tournamentStats.length > 0 ? (
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span>Tournaments Played:</span>
+                  <span className="font-semibold">
+                    {deck.tournamentStats.length}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Best Finish:</span>
+                  <span className="font-semibold">
+                    {bestFinish === 1
+                      ? "🥇 #1"
+                      : bestFinish === 2
+                        ? "🥈 #2"
+                        : bestFinish === 3
+                          ? "🥉 #3"
+                          : "🔹#" + bestFinish}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Total Podiums:</span>
+                  <span className="font-semibold">{totalPodiums}</span>
+                </div>
+              </div>
+            ) : (
+              <p className="text-default-600 italic">
+                No tournament data available
+              </p>
+            )}
           </CardBody>
         </Card>
       </div>
@@ -393,6 +455,7 @@ export default function ViewDeckPage() {
                 <TableHeader>
                   <TableColumn>TOURNAMENT</TableColumn>
                   <TableColumn>DATE</TableColumn>
+                  <TableColumn>RANK</TableColumn>
                   <TableColumn>WINS</TableColumn>
                   <TableColumn>LOSSES</TableColumn>
                   <TableColumn>TIES</TableColumn>
@@ -400,83 +463,88 @@ export default function ViewDeckPage() {
                   <TableColumn>ACTION</TableColumn>
                 </TableHeader>
                 <TableBody>
-                  {deck.tournamentStats
-                    .sort(
-                      (a, b) =>
-                        new Date(b.tournament?.startDate || 0).getTime() -
-                        new Date(a.tournament?.startDate || 0).getTime()
-                    )
-                    .map((stat, index) => {
-                      const totalGames = stat.wins + stat.losses + stat.ties;
-                      const winRate =
-                        totalGames > 0
-                          ? ((stat.wins / totalGames) * 100).toFixed(1)
-                          : "0";
+                  {deck.tournamentStats.map((stat, index) => {
+                    const totalGames = stat.wins + stat.losses + stat.ties;
+                    const winRate =
+                      totalGames > 0
+                        ? ((stat.wins / totalGames) * 100).toFixed(1)
+                        : "0";
 
-                      return (
-                        <TableRow key={index}>
-                          <TableCell>
-                            <div className="flex flex-col">
-                              <span className="font-semibold">
-                                {stat.tournament?.name || "Unknown Tournament"}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-small">
-                              {stat.tournament?.startDate
-                                ? new Date(
-                                    stat.tournament.startDate
-                                  ).toLocaleDateString()
-                                : "Unknown Date"}
+                    return (
+                      <TableRow key={index}>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-semibold">
+                              {stat.tournament?.name || "Unknown Tournament"}
                             </span>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-success font-semibold">
-                              {stat.wins}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-danger font-semibold">
-                              {stat.losses}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-warning font-semibold">
-                              {stat.ties}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              color={
-                                parseFloat(winRate) >= 75
-                                  ? "success"
-                                  : parseFloat(winRate) >= 50
-                                    ? "warning"
-                                    : "danger"
-                              }
-                              variant="flat"
-                              size="sm"
-                            >
-                              {winRate}%
-                            </Chip>
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              variant="light"
-                              size="sm"
-                              onPress={() =>
-                                router.push(
-                                  `/tournaments/${stat.tournament?.id}`
-                                )
-                              }
-                            >
-                              View
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-small">
+                            {stat.tournament?.startDate
+                              ? new Date(
+                                  stat.tournament.startDate
+                                ).toLocaleDateString()
+                              : "Unknown Date"}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-semibold">
+                            {stat.position
+                              ? stat.position === 1
+                                ? "🥇 #1"
+                                : stat.position === 2
+                                  ? "🥈 #2"
+                                  : stat.position === 3
+                                    ? "🥉 #" + stat.position
+                                    : "🔹#" + stat.position
+                              : "N/A"}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-success font-semibold">
+                            {stat.wins}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-danger font-semibold">
+                            {stat.losses}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-warning font-semibold">
+                            {stat.ties}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            color={
+                              parseFloat(winRate) >= 75
+                                ? "success"
+                                : parseFloat(winRate) >= 50
+                                  ? "warning"
+                                  : "danger"
+                            }
+                            variant="flat"
+                            size="sm"
+                          >
+                            {winRate}%
+                          </Chip>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="light"
+                            size="sm"
+                            onPress={() =>
+                              router.push(`/tournaments/${stat.tournament?.id}`)
+                            }
+                          >
+                            View
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             ),
@@ -592,6 +660,36 @@ export default function ViewDeckPage() {
           },
         ]}
       />
+
+      {/* Image Modal */}
+      <Modal
+        isOpen={isOpen}
+        onOpenChange={onOpenChange}
+        size="2xl"
+        backdrop="blur"
+        placement="center"
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">
+                <h2 className="text-xl font-bold">{deck?.name}</h2>
+                <p className="text-sm text-default-500">Deck Avatar</p>
+              </ModalHeader>
+              <ModalBody className="pb-6">
+                <div className="flex justify-center">
+                  <Image
+                    src={deck?.avatar || ""}
+                    alt={`${deck?.name} avatar`}
+                    radius="lg"
+                    className="max-w-full max-h-[60vh] object-contain"
+                  />
+                </div>
+              </ModalBody>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

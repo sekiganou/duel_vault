@@ -201,6 +201,7 @@ const UpsertModal = ({
       deckBScore: Number(deckBScore),
       notes: notes || null,
       date: new Date(date).toISOString(),
+      bracket: null,
     })
       .then(() => {
         handleGetAllMatches();
@@ -659,7 +660,8 @@ export default function MatchesPage() {
                   >
                     View
                   </DropdownItem>
-                  <DropdownItem
+                  {/* FIXME: Temporarely disable edit and delete */}
+                  {/* <DropdownItem
                     key="edit"
                     onPress={() => {
                       setSelectedMatch(match);
@@ -678,7 +680,7 @@ export default function MatchesPage() {
                     color="danger"
                   >
                     Delete
-                  </DropdownItem>
+                  </DropdownItem> */}
                 </DropdownMenu>
               </Dropdown>
             </div>
@@ -723,14 +725,14 @@ export default function MatchesPage() {
         renderCell={renderCell}
         onOpenCreateModal={() => {
           setSelectedMatch(null);
-          onOpenCreateModal();
+          // onOpenCreateModal(); FIXME: Temporarely disable create
         }}
         getStatus={getMatchStatus}
         getItemKey={(match) => match.id}
         getItemName={(match) =>
           `${match.deckA.name} vs ${match.deckB.name} (${match.date.toString().split("T")[0]})`
         }
-        deleteItems={deleteMatches}
+        deleteItems={([]) => Promise.resolve()} // FIXME: Temporarily disable bulk delete
         handleGetAllItems={handleGetAllMatches}
       />
 

@@ -91,7 +91,17 @@ jobs:
           echo "IMAGE_VERSION=$IMAGE_VERSION" >> $GITHUB_OUTPUT
           echo "Image version: $IMAGE_VERSION"
 
+      - name: Change Package Version
+        id: change-package-version
+        if: steps.get-image-version.outputs.IMAGE_VERSION != ''
+        run: |
+          IMAGE_VERSION="${{ steps.get-image-version.outputs.IMAGE_VERSION }}"
+          echo "Changing package.json version to $IMAGE_VERSION"
+          jq --arg ver "$IMAGE_VERSION" '.version = $ver' package.json > tmp.$$.json && mv tmp.$$.json package.json
+          cat package.json
+
       - name: Add Tag to Commit
+        if: steps.get-image-version.outputs.IMAGE_VERSION != '' && steps.get-commit-hash.outputs.COMMIT_HASH != ''
         id: add-tag-to-commit
         run: |
           IMAGE_VERSION="${{ steps.get-image-version.outputs.IMAGE_VERSION }}"

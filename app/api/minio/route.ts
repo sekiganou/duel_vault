@@ -1,25 +1,25 @@
 import { withErrorHandler } from "@/lib/middlewares/withErrorHandler";
 import { DeleteObjectSchema, UploadObjectSchema } from "@/lib/schemas/minio";
-import { getMinioClient, S3_BUCKET } from "@/s3";
+import { getMinioClient } from "@/s3";
 import { NextRequest, NextResponse } from "next/server";
 
 export const POST = withErrorHandler(async (req: NextRequest) => {
   const body = await req.json();
-  const { filename, contentType } = UploadObjectSchema.parse(body);
+  const { bucket, filename, contentType } = UploadObjectSchema.parse(body);
 
-  if (!filename || !contentType) {
+  if (!filename || !contentType || !bucket) {
     return NextResponse.json(
-      { error: "Missing filename or contentType" },
+      { error: "Missing filename or contentType or bucket" },
       { status: 400 }
     );
   }
 
   const minio = getMinioClient();
 
-  const bucketExists = await minio.bucketExists(S3_BUCKET);
-  if (!bucketExists) await minio.makeBucket(S3_BUCKET);
+  const bucketExists = await minio.bucketExists(bucket);
+  if (!bucketExists) await minio.makeBucket(bucket);
 
-  const url = await minio.presignedPutObject(S3_BUCKET, filename, 24 * 60 * 60);
+  const url = await minio.presignedPutObject(bucket, filename, 24 * 60 * 60);
 
   return NextResponse.json({ url });
 });
@@ -48,7 +48,7 @@ export const DELETE = withErrorHandler(async (req: NextRequest) => {
 
   const minio = getMinioClient();
   try {
-    await minio.removeObject(S3_BUCKET, filename);
+    await minio.removeObject(parsedSearchParams.bucket, filename);
     return NextResponse.json({ message: "File deleted successfully" });
   } catch (error) {
     console.error("Error deleting file:", error);
