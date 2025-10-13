@@ -5,7 +5,7 @@ up:
 	docker compose -f ${COMPOSE} up
 
 prune:
-	docker system prune -f
+	docker system prune -f && docker volume prune -f
 
 down:
 	docker compose -f ${COMPOSE} down

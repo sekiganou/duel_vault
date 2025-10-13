@@ -157,9 +157,10 @@ export default function ViewDeckPage() {
     }
   });
 
-  const bestFinish = deck.tournamentStats
-    .filter((stat) => stat.position !== null)
-    .sort((a, b) => (a.position! < b.position! ? -1 : 1))[0]?.position;
+  const bestFinish =
+    deck.tournamentStats
+      .filter((stat) => stat.position !== null)
+      .sort((a, b) => (a.position! < b.position! ? -1 : 1))[0] ?? null;
 
   const totalPodiums = deck.tournamentStats.filter(
     (stat) => stat.position !== null && stat.position <= 3
@@ -321,13 +322,15 @@ export default function ViewDeckPage() {
                 <div className="flex justify-between">
                   <span>Best Finish:</span>
                   <span className="font-semibold">
-                    {bestFinish === 1
-                      ? "🥇 #1"
-                      : bestFinish === 2
-                        ? "🥈 #2"
-                        : bestFinish === 3
-                          ? "🥉 #3"
-                          : "🔹#" + bestFinish}
+                    {bestFinish !== null
+                      ? bestFinish.position === 1
+                        ? "🥇 #1"
+                        : bestFinish.position === 2
+                          ? "🥈 #2"
+                          : bestFinish.position === 3
+                            ? "🥉 #3"
+                            : "🔹#" + bestFinish.position
+                      : "N/A"}
                   </span>
                 </div>
                 <div className="flex justify-between">

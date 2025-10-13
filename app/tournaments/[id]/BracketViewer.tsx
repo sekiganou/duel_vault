@@ -348,6 +348,7 @@ export function BracketViewer({
             imageUrl: participantMapName.get(p.name)?.avatar || "",
           }))
         );
+
         window.bracketsViewer.render(
           {
             stages: stageData.stages,
@@ -371,7 +372,13 @@ export function BracketViewer({
 
   return (
     <>
-      <div ref={containerRef} className="brackets-viewer" />
+      <div
+        style={{
+          minHeight: "400px",
+        }}
+      >
+        <div ref={containerRef} className="brackets-viewer" />
+      </div>
       {canCreateMatch && (
         <UpdateScoreModal
           handleGetTournamentById={handleGetTournamentById}

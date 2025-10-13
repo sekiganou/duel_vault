@@ -779,17 +779,17 @@ export default function ViewTournamentPage() {
               tournament.stages && tournament.stages.length > 0 ? (
                 <div>
                   {tournament.stages.map((stage, index) => {
-                    if (!stage.fileKey) return null;
-
                     return (
                       <div key={index}>
-                        <BracketViewer
-                          handleGetTournamentById={handleGetTournamentById}
-                          tournamentId={tournament.id}
-                          participantMapName={participantMapName}
-                          stageData={stage.data}
-                          stageId={stage.id}
-                        />
+                        {stage.fileKey && (
+                          <BracketViewer
+                            handleGetTournamentById={handleGetTournamentById}
+                            tournamentId={tournament.id}
+                            participantMapName={participantMapName}
+                            stageData={stage.data}
+                            stageId={stage.id}
+                          />
+                        )}
                       </div>
                     );
                   })}

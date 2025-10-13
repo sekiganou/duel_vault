@@ -40,7 +40,7 @@ import {
 } from "react";
 import { Button } from "@heroui/button";
 import { Chip, ChipProps } from "@heroui/chip";
-import { IconDotsVertical } from "@tabler/icons-react";
+import { IconDotsVertical, IconRefresh } from "@tabler/icons-react";
 import { Input } from "@heroui/input";
 import {
   Modal,
@@ -64,7 +64,7 @@ import { useRouter } from "next/navigation";
 import { getAllDecks } from "@/lib/api/decks";
 import { Avatar } from "@heroui/avatar";
 import { UpsertTournamentSchema } from "@/lib/schemas/tournaments";
-import z from "zod";
+import z, { set } from "zod";
 import is from "zod/v4/locales/is.cjs";
 
 const columns: TableColumnDescriptor[] = [
@@ -448,70 +448,96 @@ const UpsertModal = ({
                   onChange={(e) => setTournamentEndDate(e.target.value)}
                 />
               </div>
-              <Select
-                label="Participants"
-                placeholder="Select all the participants"
-                isRequired
-                selectedKeys={tournamentParticipants}
-                onSelectionChange={(keys) => {
-                  setTournamentParticipants(keys);
-                  setParticipantsTouched(true);
-                  if (Array.from(keys).length >= 2) {
-                    setTournamentParticipantsInputError("");
-                  } else {
+
+              <div className="grid grid-cols-5 md:grid-cols-5 gap-4">
+                <Select
+                  className="col-span-4"
+                  label="Participants"
+                  placeholder="Select all the participants"
+                  isRequired
+                  selectedKeys={tournamentParticipants}
+                  onSelectionChange={(keys) => {
+                    setTournamentParticipants(keys);
+                    setParticipantsTouched(true);
+                    if (Array.from(keys).length >= 2) {
+                      setTournamentParticipantsInputError("");
+                    } else {
+                      setTournamentParticipantsInputError(
+                        "Please select at least two participants."
+                      );
+                    }
+                  }}
+                  onClear={() => {
+                    setTournamentParticipants(new Set([]));
                     setTournamentParticipantsInputError(
                       "Please select at least two participants."
                     );
+                  }}
+                  isClearable
+                  isDisabled={isEdit}
+                  selectionMode="multiple"
+                  isMultiline
+                  errorMessage={tournamentParticipantsInputError}
+                  isInvalid={
+                    participantsTouched && !isTournamentParticipantsValid
                   }
-                }}
-                onClear={() => {
-                  setTournamentParticipants(new Set([]));
-                  setTournamentParticipantsInputError(
-                    "Please select at least two participants."
-                  );
-                }}
-                isClearable
-                isDisabled={isEdit}
-                selectionMode="multiple"
-                isMultiline
-                errorMessage={tournamentParticipantsInputError}
-                isInvalid={
-                  participantsTouched && !isTournamentParticipantsValid
-                }
-                renderValue={(items) => (
-                  <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto py-1">
-                    {items.map((item) => (
-                      <Chip key={item.key} color="default" variant="faded">
-                        {mappedDecksIdName.get(Number(item.key))}
-                      </Chip>
-                    ))}
-                  </div>
-                )}
-              >
-                {(tournamentFormatId
-                  ? decks?.filter(
-                      (deck) => deck.formatId === Number(tournamentFormatId)
-                    )!
-                  : []
-                ).map((deck) => (
-                  <SelectItem key={deck.id.toString()}>
-                    <div className="flex gap-2 items-center">
-                      <Avatar
-                        alt={deck.name}
-                        className="shrink-0"
-                        size="sm"
-                        src={deck.avatar ?? ""}
-                      />
-                      <div className="flex flex-col">
-                        <span className="text-small">{deck.name}</span>
-                        <span className="text-tiny text-default-400">
-                          {deck.archetype.name}
-                        </span>
-                      </div>
+                  renderValue={(items) => (
+                    <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto py-1">
+                      {items.map((item) => (
+                        <Chip key={item.key} color="default" variant="faded">
+                          {mappedDecksIdName.get(Number(item.key))}
+                        </Chip>
+                      ))}
                     </div>
-                  </SelectItem>
-                ))}
-              </Select>
+                  )}
+                >
+                  {(tournamentFormatId
+                    ? decks?.filter(
+                        (deck) => deck.formatId === Number(tournamentFormatId)
+                      )!
+                    : []
+                  ).map((deck) => (
+                    <SelectItem key={deck.id.toString()}>
+                      <div className="flex gap-2 items-center">
+                        <Avatar
+                          alt={deck.name}
+                          className="shrink-0"
+                          size="sm"
+                          src={deck.avatar ?? ""}
+                        />
+                        <div className="flex flex-col">
+                          <span className="text-small">{deck.name}</span>
+                          <span className="text-tiny text-default-400">
+                            {deck.archetype.name}
+                          </span>
+                        </div>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </Select>
+                <Tooltip content="Randomize Participants">
+                  <Button
+                    isIconOnly
+                    variant="light"
+                    className="w-full h-full"
+                    isDisabled={new Set(tournamentParticipants).size === 0} // disable if no participants selected
+                    onPress={() => {
+                      // Shuffle the currently selected participants
+                      const currentParticipants = Array.from(
+                        tournamentParticipants
+                      );
+                      const shuffledParticipants = [
+                        ...currentParticipants,
+                      ].sort(() => Math.random() - 0.5);
+
+                      setTournamentParticipants(new Set(shuffledParticipants));
+                    }}
+                  >
+                    <IconRefresh />
+                  </Button>
+                </Tooltip>
+              </div>
+
               <Input
                 label="Notes (Optional)"
                 placeholder="Add tournament notes or description"

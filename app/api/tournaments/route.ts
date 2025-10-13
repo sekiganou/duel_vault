@@ -182,6 +182,21 @@ export const DELETE = withErrorHandler(async (req: NextRequest) => {
   await client.$transaction(async (tx) => {
     const minio = getMinioClient();
 
+    const tournamentDeckStats = await tx.tournamentDeckStats.findMany({
+      where: { tournamentId: { in: ids } },
+    });
+
+    for (const stats of tournamentDeckStats) {
+      await tx.deck.update({
+        where: { id: stats.deckId },
+        data: {
+          wins: { decrement: stats.wins },
+          losses: { decrement: stats.losses },
+          ties: { decrement: stats.ties },
+        },
+      });
+    }
+
     await tx.tournamentStages
       .findMany({
         where: { tournamentId: { in: ids } },
