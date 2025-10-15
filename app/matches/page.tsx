@@ -661,12 +661,13 @@ export default function MatchesPage() {
                     View
                   </DropdownItem>
                   {/* FIXME: Temporarely disable edit and delete */}
-                  {/* <DropdownItem
+                  <DropdownItem
                     key="edit"
                     onPress={() => {
                       setSelectedMatch(match);
                       onOpenEditModal();
                     }}
+                    isDisabled={true}
                   >
                     Edit
                   </DropdownItem>
@@ -678,9 +679,10 @@ export default function MatchesPage() {
                     }}
                     className="text-danger"
                     color="danger"
+                    isDisabled={true}
                   >
                     Delete
-                  </DropdownItem> */}
+                  </DropdownItem>
                 </DropdownMenu>
               </Dropdown>
             </div>
@@ -725,15 +727,17 @@ export default function MatchesPage() {
         renderCell={renderCell}
         onOpenCreateModal={() => {
           setSelectedMatch(null);
-          // onOpenCreateModal(); FIXME: Temporarely disable create
+          onOpenCreateModal();
         }}
         getStatus={getMatchStatus}
         getItemKey={(match) => match.id}
         getItemName={(match) =>
           `${match.deckA.name} vs ${match.deckB.name} (${match.date.toString().split("T")[0]})`
         }
-        deleteItems={([]) => Promise.resolve()} // FIXME: Temporarily disable bulk delete
+        deleteItems={deleteMatches}
         handleGetAllItems={handleGetAllMatches}
+        isReadOnly={true} // FIXME: Temporarily disable create, edit and delete
+        onRowAction={(key: Key) => router.push(`/matches/${key}`)}
       />
 
       <UpsertModal

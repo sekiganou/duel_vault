@@ -556,6 +556,7 @@ export default function DecksPage() {
         getItemName={(deck: DeckWithRelations) => deck.name}
         deleteItems={deleteDecks}
         handleGetAllItems={handleGetAllDecks}
+        onRowAction={(key: Key) => router.push(`/decks/${key}`)}
       />
 
       <UpsertModal

@@ -2,7 +2,12 @@ services:
   db:
     image: postgres:latest
     restart: always
-    env_file: ".env"
+    environment:
+      - POSTGRES_USER=duelvault
+      - POSTGRES_PASSWORD=duelvault
+      - POSTGRES_DB=duelvault
+    networks:
+      - backend
     volumes:
       - db_data:/var/lib/postgresql/data
     ports:
@@ -15,6 +20,8 @@ services:
       - s3_data:/var/lib/minio/data
     command: server /var/lib/minio/data --console-address ":9001"
     env_file: ".env"
+    networks:
+      - backend
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -31,6 +38,13 @@ services:
     ports:
       - "3000:3000"
     env_file: ".env"
+    networks:
+      - backend
+    environment:
+      - DATABASE_URL=postgresql://duelvault:duelvault@db:5432/duelvault
+      - MINIO_HOST=s3
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
     volumes:
       - .:/app
       - /app/node_modules
@@ -38,3 +52,7 @@ services:
 volumes:
   db_data:
   s3_data:
+
+networks:
+  backend:
+    driver: bridge
