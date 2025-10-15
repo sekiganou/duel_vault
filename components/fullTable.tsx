@@ -34,6 +34,8 @@ import {
   IconTrash,
 } from "@tabler/icons-react";
 import { Key, useCallback, useEffect, useMemo, useState } from "react";
+import z from "zod";
+import { MatchWithRelations } from "@/types";
 
 interface FullTableProps<T> {
   columns: TableColumnDescriptor[];
@@ -49,6 +51,8 @@ interface FullTableProps<T> {
   getItemName: (item: T) => string;
   deleteItems: (ids: number[]) => Promise<void>;
   handleGetAllItems: () => Promise<void>;
+  isReadOnly?: boolean;
+  onRowAction?: (item: Key) => void;
 }
 
 const DeleteModal = <T,>({
@@ -137,6 +141,8 @@ export const FullTable = <T,>(props: FullTableProps<T>) => {
     deleteItems,
     getItemName,
     handleGetAllItems,
+    isReadOnly = false,
+    onRowAction = null,
   } = props;
 
   const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -312,11 +318,8 @@ export const FullTable = <T,>(props: FullTableProps<T>) => {
                 endContent={<IconTrash />}
                 onPress={() => {
                   onOpenDeleteModal();
-                  // handleDeleteItems(
-                  //   new Set(Array.from(selectedKeys) as number[])
-                  // );
                 }}
-                // isLoading={deletingItems}
+                isDisabled={isReadOnly}
               >
                 Delete{" "}
                 {selectedKeys === "all" ? items.length : selectedKeys.size}{" "}
@@ -327,6 +330,7 @@ export const FullTable = <T,>(props: FullTableProps<T>) => {
                 color="primary"
                 endContent={<IconPlus />}
                 onPress={onOpenCreateModal}
+                isDisabled={isReadOnly}
               >
                 Add New
               </Button>
@@ -418,6 +422,7 @@ export const FullTable = <T,>(props: FullTableProps<T>) => {
         topContentPlacement="outside"
         onSelectionChange={setSelectedKeys}
         onSortChange={setSortDescriptor}
+        onRowAction={onRowAction ?? undefined}
       >
         <TableHeader columns={headerColumns}>
           {(column) => (

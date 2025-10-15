@@ -13,13 +13,9 @@ export const CardTabs = ({ tabs, className }: CustomTabsProps) => {
     emptyContent,
   }: {
     emptyContent: CardTabItem["emptyContent"];
-  }) =>
-  (
+  }) => (
     <div className="flex flex-col items-center">
-      <emptyContent.icon
-        size={48}
-        className="text-default-300 mx-auto mb-4"
-      />
+      <emptyContent.icon size={48} className="text-default-300 mx-auto mb-4" />
       <h3 className="text-lg font-semibold text-default-500 mb-2">
         {emptyContent.header}
       </h3>

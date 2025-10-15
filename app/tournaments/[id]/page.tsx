@@ -202,7 +202,7 @@ export default function ViewTournamentPage() {
   const status = tournament.status;
   const totalMatches =
     tournament.stages[0].data.matches.length -
-    (tournament.stages[0].data.stages[0].settings.grandFinal ===
+    (tournament.stages[0].data.stages[0]?.settings.grandFinal ===
     GrandFinalType.DOUBLE
       ? 1
       : 0);

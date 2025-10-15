@@ -33,6 +33,7 @@ import {
 } from "@heroui/dropdown";
 import {
   ChangeEventHandler,
+  Key,
   use,
   useCallback,
   useEffect,
@@ -775,6 +776,7 @@ export default function TournamentsPage() {
         getItemName={(tournament: TournamentWithRelations) => tournament.name}
         deleteItems={deleteTournaments}
         handleGetAllItems={handleGetAllTournaments}
+        onRowAction={(key: Key) => router.push(`/tournaments/${key}`)}
       />
 
       <UpsertModal
